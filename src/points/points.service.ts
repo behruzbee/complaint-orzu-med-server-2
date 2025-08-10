@@ -1,26 +1,29 @@
 import {
   Injectable,
+  Logger,
+  BadRequestException,
   NotFoundException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { FeedbackEntity } from 'src/feedbacks/entities/feedback.entity';
+import { Repository, In } from 'typeorm';
 import { PointEntity } from './entities/points.entity';
-import { CreatePointDto } from './dto/create.dto';
+import { Branches, CreatePointDto, PointValue, TargetName } from './dto/create.dto';
 import { UserEntity } from 'src/users/entities/user.entity';
+import { FeedbacksService } from 'src/feedbacks/feedbacks.service';
+import { FeedbackEntity } from 'src/feedbacks/entities/feedback.entity';
 
 @Injectable()
 export class PointsService {
+  private readonly logger = new Logger(PointsService.name);
+
   constructor(
     @InjectRepository(PointEntity)
-    private readonly pointRepository: Repository<PointEntity>,
+    private readonly pointsRepository: Repository<PointEntity>,
 
     @InjectRepository(FeedbackEntity)
     private readonly feedbackRepository: Repository<FeedbackEntity>,
 
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
+    private readonly feedbacksService: FeedbacksService,
   ) {}
 
   async create(
@@ -28,70 +31,143 @@ export class PointsService {
     userId: string,
   ): Promise<PointEntity> {
     try {
-      const { points, feedbackId } = createPointDto;
-
-      const user = await this.userRepository.findOneBy({ id: userId });
+      const user = await this.pointsRepository.manager.findOne(UserEntity, {
+        where: { id: userId },
+      });
       if (!user) {
-        throw new NotFoundException(`Пользователь с id=${userId} не найден`);
+        throw new BadRequestException('Пользователь не найден');
       }
 
       let feedback: FeedbackEntity | null = null;
-
-      if (feedbackId) {
-        feedback = await this.feedbackRepository.findOneBy({ id: feedbackId });
-        if (!feedback) {
-          throw new NotFoundException(
-            `Обратная связь с id=${feedbackId} не найдена`,
-          );
-        }
+      if (createPointDto.feedback) {
+        feedback = await this.feedbacksService.createFeedback(
+          createPointDto.feedback,
+          userId,
+          createPointDto.branch,
+          createPointDto.category,
+        );
       }
 
-      const point = this.pointRepository.create({
-        points,
-        feedback,
+      return await this.pointsRepository.save({
+        ...createPointDto,
         user,
+        feedback
       });
-
-      return await this.pointRepository.save(point);
     } catch (error) {
-      console.error(error);
-      throw new InternalServerErrorException(
-        `Ошибка при создании оценки: ${error.message}`,
-      );
+      this.logger.error('Ошибка создания Point', error);
+      throw new BadRequestException('Ошибка при создании точки');
+    }
+  }
+
+  async createMany(
+    createPointDtos: CreatePointDto[],
+    userId: string,
+    branch: Branches
+  ): Promise<PointEntity[]> {
+    try {
+      const createdPoints: PointEntity[] = [];
+
+      const MAX_POINTS = PointValue.FIVE;
+      const categories = Object.values(TargetName);
+
+      const dtoMap = new Map<string, CreatePointDto>();
+      for (const dto of createPointDtos) {
+        dtoMap.set(dto.category, dto);
+      }
+
+      for (const category of categories) {
+        let dto = dtoMap.get(category);
+
+        if (!dto) {
+          if (!branch) {
+            throw new BadRequestException(
+              'Не указан филиал для заполнения недостающих точек',
+            );
+          }
+
+          dto = {
+            category,
+            points: MAX_POINTS,
+            branch,
+          };
+        }
+
+        const created = await this.create(dto, userId);
+        createdPoints.push(created);
+      }
+
+      return createdPoints;
+    } catch (error) {
+      this.logger.error('Ошибка создания множества точек', error);
+      throw new BadRequestException('Ошибка при создании множества точек');
     }
   }
 
   async findAll(): Promise<PointEntity[]> {
     try {
-      return await this.pointRepository.find({
+      return await this.pointsRepository.find({
         relations: ['feedback', 'user'],
-        order: { createdAt: 'DESC' },
       });
     } catch (error) {
-      console.error(error);
-      throw new InternalServerErrorException(
-        `Ошибка при получении оценок: ${error.message}`,
-      );
+      this.logger.error('Ошибка получения всех точек', error);
+      throw new BadRequestException('Ошибка при получении точек');
     }
   }
 
-  async deleteLast(): Promise<void> {
+  async findWithFeedback(): Promise<PointEntity[]> {
     try {
-      const last = await this.pointRepository.findOne({
-        where: {},
+      return await this.pointsRepository.find({
+        where: {
+          feedback: In(
+            await this.feedbackRepository
+              .find()
+              .then((fbs) => fbs.map((fb) => fb.id)),
+          ),
+        },
+        relations: ['feedback', 'user'],
+      });
+    } catch (error) {
+      this.logger.error('Ошибка получения точек с feedback', error);
+      throw new BadRequestException('Ошибка при получении точек с отзывами');
+    }
+  }
+
+  async removeLastFivePoints(): Promise<void> {
+    try {
+      const lastFivePoints = await this.pointsRepository.find({
         order: { createdAt: 'DESC' },
+        take: 5,
+        relations: ['feedback'],
       });
 
-      if (!last) {
-        throw new NotFoundException('Нет ни одной оценки для удаления');
+      for (const point of lastFivePoints) {
+        if (point.feedback) {
+          await this.feedbackRepository.delete(point.feedback.id);
+          this.logger.log(
+            `Удалён feedback с id ${point.feedback.id} для point ${point.id}`,
+          );
+        }
       }
 
-      await this.pointRepository.remove(last);
+      await this.pointsRepository.remove(lastFivePoints);
+      this.logger.log('Удалены последние 5 точек');
     } catch (error) {
-      console.error(error);
-      throw new InternalServerErrorException(
-        `Ошибка при удалении последней оценки: ${error.message}`,
-      );
+      this.logger.error('Ошибка удаления последних 5 точек', error);
+      throw new BadRequestException('Ошибка при удалении точек');
+    }
+  }
+
+  async findOne(id: string): Promise<PointEntity> {
+    try {
+      const point = await this.pointsRepository.findOne({
+        where: { id },
+        relations: ['feedback', 'user'],
+      });
+      if (!point) throw new NotFoundException('Точка не найдена');
+      return point;
+    } catch (error) {
+      this.logger.error(`Ошибка получения точки по id ${id}`, error);
+      throw new BadRequestException('Ошибка при получении точки');
     }
   }
 }

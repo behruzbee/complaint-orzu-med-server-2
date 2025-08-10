@@ -10,6 +10,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from './auth/auth.module';
 import { CallStatusModule } from './call_status/call_status.module';
 import { PointsModule } from './points/points.module';
+import { BotModule } from './bot/bot.module';
+import { VoiceMessageEntity } from './bot/entities/voice_message.entity';
+import { TextMessageEntity } from './bot/entities/text_message.entity';
+import { TrelloModule } from './trello/trello.module';
+import { FeedbacksModule } from './feedbacks/feedbacks.module';
+import { TrelloCardEntity } from './trello/entities/trello.entity';
+import { PatientEntity } from './patients/entities/patient.entity';
+import { PatientsModule } from './patients/patients.module';
 
 @Module({
   imports: [
@@ -26,7 +34,16 @@ import { PointsModule } from './points/points.module';
       synchronize: true,
       retryAttempts: 3,
       retryDelay: 5000,
-      entities: [UserEntity, FeedbackEntity, PointEntity, CallStatusEntity],
+      entities: [
+        UserEntity,
+        FeedbackEntity,
+        PointEntity,
+        CallStatusEntity,
+        VoiceMessageEntity,
+        TextMessageEntity,
+        TrelloCardEntity,
+        PatientEntity
+      ],
     }),
     JwtModule.register({
       global: true,
@@ -36,7 +53,11 @@ import { PointsModule } from './points/points.module';
     UsersModule,
     AuthModule,
     CallStatusModule,
-    PointsModule
+    PointsModule,
+    BotModule,
+    TrelloModule,
+    FeedbacksModule,
+    PatientsModule
   ],
 })
 export class AppModule {}

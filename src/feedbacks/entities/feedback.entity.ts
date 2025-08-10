@@ -3,43 +3,40 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
-  ManyToMany,
-  JoinTable,
   PrimaryGeneratedColumn,
+  OneToMany,
+  JoinColumn,
   OneToOne,
 } from 'typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { PointEntity } from 'src/points/entities/points.entity';
-
-export enum FeedbackCategory {
-  COMPLAINT = 'complaint',
-  SUGGESTION = 'suggestion',
-}
-
-// Филиалы
-export enum Branches {
-  CHINOZ = 'ЧИНОЗ',
-  YUNUSABAD = 'ЮНУСАБАД',
-  OQQURGHON = 'ОККУРГОН',
-  YANGIBOZOR = 'ЯНГИ БОЗОР',
-  ZANGIOTA = 'ЗАНГИОТА',
-  PARKENT = 'ПАРКЕНТ',
-  FOTIMA_SULTON = 'ФОТИМА-СУЛТОН',
-}
+import { TextMessageEntity } from 'src/bot/entities/text_message.entity';
+import { VoiceMessageEntity } from 'src/bot/entities/voice_message.entity';
+import { FeedbackCategory } from '../dto/create.dto';
+import { PatientEntity } from 'src/patients/entities/patient.entity';
 
 @Entity('feedbacks')
 export class FeedbackEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'full_name' })
-  fullName: string;
+  @Column({ name: 'firstName' })
+  firstName: string;
 
-  @Column({ type: 'text', nullable: true })
-  message?: string;
+  @Column({ name: 'lastName' })
+  lastName: string;
 
-  @Column({ name: 'voice_url', nullable: true })
-  voiceUrl?: string;
+  @OneToMany(() => TextMessageEntity, (text) => text.feedback, {
+    nullable: true,
+    cascade: true,
+  })
+  messages?: TextMessageEntity[];
+
+  @OneToMany(() => VoiceMessageEntity, (voice) => voice.feedback, {
+    nullable: true,
+    cascade: true,
+  })
+  voices?: VoiceMessageEntity[];
 
   @Column({
     type: 'enum',
@@ -47,13 +44,13 @@ export class FeedbackEntity {
   })
   category: FeedbackCategory;
 
-  @Column({
-    type: 'enum',
-    enum: Branches,
-  })
-  branch: Branches;
+  @Column({ name: 'status' })
+  status: string;
 
-  @Column({ name: 'phone_number', length: 20 })
+  @Column({ length: 20, nullable: true })
+  passport?: string;
+
+  @Column({ length: 20 })
   phoneNumber: string;
 
   @CreateDateColumn({ name: 'created_at' })
@@ -62,10 +59,17 @@ export class FeedbackEntity {
   @ManyToOne(() => UserEntity, (user) => user.feedbacks, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn()
   user: UserEntity;
 
+  @ManyToOne(() => PatientEntity, (patient) => patient.feedbacks, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  patient: PatientEntity;
+
   @OneToOne(() => PointEntity, (point) => point.feedback, {
-    cascade: true,
+    onDelete: 'CASCADE',
   })
   point: PointEntity;
 }

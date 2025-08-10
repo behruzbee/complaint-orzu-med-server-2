@@ -3,13 +3,13 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-  ManyToMany,
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { FeedbackEntity } from 'src/feedbacks/entities/feedback.entity';
 import { UserEntity } from 'src/users/entities/user.entity';
+import { TargetName, PointValue, Branches } from '../dto/create.dto';
 
 @Entity('points')
 export class PointEntity {
@@ -18,18 +18,32 @@ export class PointEntity {
 
   @Column({
     type: 'enum',
-    enum: [2, 3, 4, 5],
+    enum: TargetName,
   })
-  points: 2 | 3 | 4 | 5;
+  category: TargetName;
+
+  @Column({
+    type: 'enum',
+    enum: PointValue,
+  })
+  points: PointValue;
+
+  @Column({
+    type: 'enum',
+    enum: Branches,
+  })
+  branch: Branches;
 
   @OneToOne(() => FeedbackEntity, (feedback) => feedback.point, {
+    nullable: true,
     onDelete: 'CASCADE',
-    nullable: true
   })
   @JoinColumn()
   feedback: FeedbackEntity | null;
 
-  @ManyToOne(() => UserEntity, (user) => user.points, { onDelete: 'CASCADE' })
+  @ManyToOne(() => UserEntity, (user) => user.points, {
+    onDelete: 'CASCADE',
+  })
   user: UserEntity;
 
   @CreateDateColumn()
