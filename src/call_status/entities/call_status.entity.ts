@@ -1,5 +1,12 @@
+import { Branches } from 'src/points/dto/create.dto';
 import { UserEntity } from 'src/users/entities/user.entity';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 
 export enum CallStatusType {
   NO_ANSWER = 'no_answer',
@@ -22,9 +29,17 @@ export class CallStatusEntity {
   @Column({ nullable: true })
   phoneNumber?: string;
 
+  @Column({
+    type: 'enum',
+    enum: Branches,
+  })
+  branch: Branches;
+
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => UserEntity, user => user.call_statuses, {onDelete: 'CASCADE'})
-  user: UserEntity
+  @ManyToOne(() => UserEntity, (user) => user.call_statuses, {
+    onDelete: 'CASCADE',
+  })
+  user: UserEntity;
 }

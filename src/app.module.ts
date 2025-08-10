@@ -18,6 +18,7 @@ import { FeedbacksModule } from './feedbacks/feedbacks.module';
 import { TrelloCardEntity } from './trello/entities/trello.entity';
 import { PatientEntity } from './patients/entities/patient.entity';
 import { PatientsModule } from './patients/patients.module';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { PatientsModule } from './patients/patients.module';
     UsersModule,
     AuthModule,
     CallStatusModule,
+    ReportModule,
     PointsModule,
     BotModule,
     TrelloModule,
