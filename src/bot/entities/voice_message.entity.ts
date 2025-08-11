@@ -66,7 +66,7 @@ export class VoiceMessageEntity {
     return `${process.env.API_BASE_URL}/message/voice/${this.id}/stream`;
   }
 
-  @Column({ length: 10, nullable: true })
+  @Column({  nullable: true })
   voiceUrl: string;
   // Дата создания записи
   @CreateDateColumn()
