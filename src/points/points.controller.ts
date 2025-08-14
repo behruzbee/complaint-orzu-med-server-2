@@ -25,7 +25,7 @@ export class PointsController {
   @Post('bulk')
   @CheckRoles(Roles.Admin)
   async createMany(@Body() createPointDtos: CreateManyPointsDto, @CurrentUser() user: CurrentUserPayload): Promise<PointEntity[]> {
-    return this.pointsService.createMany(createPointDtos.points, user.id, createPointDtos.branch);
+    return this.pointsService.createMany(createPointDtos.points, user.id, createPointDtos.branch, createPointDtos.phoneNumber);
   }
 
   @Get()

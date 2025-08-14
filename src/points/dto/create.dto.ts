@@ -72,4 +72,10 @@ export class CreateManyPointsDto {
     message: `Филиал должна быть одним из: ${Object.values(Branches).join(', ')}`,
   })
   branch: Branches;
+
+  @IsString()
+  @Matches(/^\d{9,15}$/, {
+    message: 'Номер телефона должен быть в международном формате',
+  })
+  phoneNumber: string;
 }

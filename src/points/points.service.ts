@@ -58,21 +58,6 @@ export class PointsService {
           createPointDto.branch,
           createPointDto.category,
         );
-      } else if (createPointDto.phoneNumber) {
-        const patient = await this.patientRepository.findOneBy({
-          phoneNumber: createPointDto.phoneNumber,
-          status: PatientStatus.REGULAR,
-        });
-
-        if (!patient) {
-          await this.patientRepository.update(
-            {
-              phoneNumber: createPointDto.phoneNumber,
-              status: PatientStatus.NEW,
-            },
-            { status: PatientStatus.REGULAR },
-          );
-        }
       }
 
       return await this.pointsRepository.save({
@@ -90,6 +75,7 @@ export class PointsService {
     createPointDtos: CreatePointDto[],
     userId: string,
     branch: Branches,
+    phoneNumber: string,
   ): Promise<PointEntity[]> {
     try {
       const createdPoints: PointEntity[] = [];
@@ -122,6 +108,23 @@ export class PointsService {
 
         const created = await this.create(dto, userId);
         createdPoints.push(created);
+      }
+
+      if (phoneNumber) {
+        const patient = await this.patientRepository.findOneBy({
+          phoneNumber: phoneNumber,
+          status: PatientStatus.REGULAR,
+        });
+
+        if (!patient) {
+          await this.patientRepository.update(
+            {
+              phoneNumber: phoneNumber,
+              status: PatientStatus.NEW,
+            },
+            { status: PatientStatus.REGULAR },
+          );
+        }
       }
 
       return createdPoints;
