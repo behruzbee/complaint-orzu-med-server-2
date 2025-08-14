@@ -98,7 +98,7 @@ export class PatientsService {
       firstName,
       lastName,
       phoneNumber,
-      branch: branch || '',
+      branch,
       status: PatientStatus.NEW,
     });
 

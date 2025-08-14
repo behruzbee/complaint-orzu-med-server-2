@@ -17,5 +17,5 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsString()
-  branch?: string;
+  branch: string;
 }

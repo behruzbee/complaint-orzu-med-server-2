@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { CreateFeedbackDto } from 'src/feedbacks/dto/create.dto';
@@ -50,7 +51,10 @@ export class CreatePointDto {
   branch: Branches;
 
   @IsString()
-  phoneNumber: string
+  @Matches(/^\d{9,15}$/, {
+    message: 'Номер телефона должен быть в международном формате',
+  })
+  phoneNumber: string;
 
   @IsOptional()
   @ValidateNested()
@@ -63,7 +67,7 @@ export class CreateManyPointsDto {
   @ValidateNested({ each: true })
   @Type(() => CreatePointDto)
   points: CreatePointDto[];
-  
+
   @IsEnum(Branches, {
     message: `Филиал должна быть одним из: ${Object.values(Branches).join(', ')}`,
   })
