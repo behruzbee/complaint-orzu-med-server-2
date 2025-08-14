@@ -2,9 +2,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
 } from '@nestjs/common';
 import { CreatePatientDto } from './dto/create.dto';
@@ -43,6 +46,15 @@ export class PatientsController {
       return await this.patientsService.getPatientsByStatus(
         PatientStatus.REGULAR,
       );
+    } catch (err) {
+      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Delete(':id')
+  async deletePatient(@Param('id', ParseIntPipe) id: number) {
+    try {
+      return await this.patientsService.deletePatient(id);
     } catch (err) {
       throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
     }

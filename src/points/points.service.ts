@@ -7,10 +7,19 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { PointEntity } from './entities/points.entity';
-import { Branches, CreatePointDto, PointValue, TargetName } from './dto/create.dto';
+import {
+  Branches,
+  CreatePointDto,
+  PointValue,
+  TargetName,
+} from './dto/create.dto';
 import { UserEntity } from 'src/users/entities/user.entity';
 import { FeedbacksService } from 'src/feedbacks/feedbacks.service';
 import { FeedbackEntity } from 'src/feedbacks/entities/feedback.entity';
+import {
+  PatientEntity,
+  PatientStatus,
+} from 'src/patients/entities/patient.entity';
 
 @Injectable()
 export class PointsService {
@@ -22,6 +31,9 @@ export class PointsService {
 
     @InjectRepository(FeedbackEntity)
     private readonly feedbackRepository: Repository<FeedbackEntity>,
+
+    @InjectRepository(PatientEntity)
+    private readonly patientRepository: Repository<PatientEntity>,
 
     private readonly feedbacksService: FeedbacksService,
   ) {}
@@ -46,12 +58,27 @@ export class PointsService {
           createPointDto.branch,
           createPointDto.category,
         );
+      } else if (createPointDto.phoneNumber) {
+        const patient = await this.patientRepository.findOneBy({
+          phoneNumber: createPointDto.phoneNumber,
+          status: PatientStatus.REGULAR,
+        });
+
+        if (!patient) {
+          await this.patientRepository.update(
+            {
+              phoneNumber: createPointDto.phoneNumber,
+              status: PatientStatus.NEW,
+            },
+            { status: PatientStatus.REGULAR },
+          );
+        }
       }
 
       return await this.pointsRepository.save({
         ...createPointDto,
         user,
-        feedback
+        feedback,
       });
     } catch (error) {
       this.logger.error('Ошибка создания Point', error);
@@ -62,7 +89,7 @@ export class PointsService {
   async createMany(
     createPointDtos: CreatePointDto[],
     userId: string,
-    branch: Branches
+    branch: Branches,
   ): Promise<PointEntity[]> {
     try {
       const createdPoints: PointEntity[] = [];
@@ -89,6 +116,7 @@ export class PointsService {
             category,
             points: MAX_POINTS,
             branch,
+            phoneNumber: createPointDtos[0].phoneNumber,
           };
         }
 

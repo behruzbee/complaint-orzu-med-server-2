@@ -3,6 +3,7 @@ import {
   IsArray,
   IsEnum,
   IsOptional,
+  IsString,
   ValidateNested,
 } from 'class-validator';
 import { CreateFeedbackDto } from 'src/feedbacks/dto/create.dto';
@@ -47,6 +48,9 @@ export class CreatePointDto {
     message: `Филиал должна быть одним из: ${Object.values(Branches).join(', ')}`,
   })
   branch: Branches;
+
+  @IsString()
+  phoneNumber: string
 
   @IsOptional()
   @ValidateNested()

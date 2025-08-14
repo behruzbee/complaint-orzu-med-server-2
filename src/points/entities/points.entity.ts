@@ -34,6 +34,9 @@ export class PointEntity {
   })
   branch: Branches;
 
+  @Column()
+  phoneNumber: string
+
   @OneToOne(() => FeedbackEntity, (feedback) => feedback.point, {
     nullable: true,
     onDelete: 'CASCADE',
