@@ -41,6 +41,7 @@ export class PointsService {
   async create(
     createPointDto: CreatePointDto,
     userId: string,
+    phoneNumber?: string
   ): Promise<PointEntity> {
     try {
       const user = await this.pointsRepository.manager.findOne(UserEntity, {
@@ -64,6 +65,7 @@ export class PointsService {
         ...createPointDto,
         user,
         feedback,
+        phoneNumber: phoneNumber || createPointDto.phoneNumber
       });
     } catch (error) {
       this.logger.error('Ошибка создания Point', error);
@@ -102,11 +104,11 @@ export class PointsService {
             category,
             points: MAX_POINTS,
             branch,
-            phoneNumber: createPointDtos[0].phoneNumber,
+            phoneNumber
           };
         }
 
-        const created = await this.create(dto, userId);
+        const created = await this.create(dto, userId, phoneNumber);
         createdPoints.push(created);
       }
 
