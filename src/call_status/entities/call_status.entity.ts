@@ -26,8 +26,8 @@ export class CallStatusEntity {
   })
   status: CallStatusType;
 
-  @Column({ nullable: true })
-  phoneNumber?: string;
+  @Column()
+  phoneNumber: string;
 
   @Column({
     type: 'enum',

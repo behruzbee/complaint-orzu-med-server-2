@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { CallStatusEntity } from './entities/call_status.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
+import { PatientEntity, PatientStatus } from 'src/patients/entities/patient.entity';
 
 @Injectable()
 export class CallStatusService {
@@ -17,6 +18,8 @@ export class CallStatusService {
     private readonly callStatusRepository: Repository<CallStatusEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(PatientEntity)
+    private readonly patientRepository: Repository<PatientEntity>,
   ) {}
 
   async getAll(): Promise<CallStatusEntity[]> {
@@ -39,6 +42,22 @@ export class CallStatusService {
     try {
       const user = await this.userRepository.findOneBy({ id: userId });
       const newStatus = this.callStatusRepository.create(callStatusDto);
+      if (callStatusDto.phoneNumber) {
+        const patient = await this.patientRepository.findOneBy({
+          phoneNumber: callStatusDto.phoneNumber,
+          status: PatientStatus.REGULAR,
+        });
+
+        if (!patient) {
+          await this.patientRepository.update(
+            {
+              phoneNumber: callStatusDto.phoneNumber,
+              status: PatientStatus.NEW,
+            },
+            { status: PatientStatus.REGULAR },
+          );
+        }
+      }
       return await this.callStatusRepository.save({
         ...newStatus,
         user: user as UserEntity,

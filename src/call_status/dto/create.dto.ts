@@ -1,11 +1,10 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsString } from 'class-validator';
 import { CallStatusType } from '../entities/call_status.entity';
 import { Branches } from 'src/points/dto/create.dto';
 
 export class CreateCallStatusDto {
-  @IsOptional()
   @IsString({ message: 'Номер телефона должен быть строкой.' })
-  phoneNumber?: string;
+  phoneNumber: string;
 
   @IsEnum(CallStatusType, {
     message:
