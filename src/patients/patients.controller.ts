@@ -9,54 +9,36 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { CreatePatientDto } from './dto/create.dto';
 import { PatientsService } from './patients.service';
 import { PatientStatus } from './entities/patient.entity';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { CheckRoles } from 'src/common/decorators/roles.decorator';
+import { Roles } from 'src/common/enums/roles.enum';
 
 @Controller('patients')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
-  @Post('create')
-  async createPatient(@Body() dto: CreatePatientDto) {
-    try {
-      return await this.patientsService.addPatientManually(dto);
-    } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
-    }
+  @Post()
+  @CheckRoles(Roles.Admin)
+  async create(@Body() dto: CreatePatientDto) {
+    return this.patientsService.addPatientManually(dto);
   }
 
-  // Получить поступивших
-  @Get('new')
-  async getNewPatients() {
-    try {
-      return await this.patientsService.getPatientsByStatus(
-        PatientStatus.NEW,
-      );
-    } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
-    }
-  }
-
-  // Получить постоянных
-  @Get('regular')
-  async getPermanentPatients() {
-    try {
-      return await this.patientsService.getPatientsByStatus(
-        PatientStatus.REGULAR,
-      );
-    } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
-    }
+  @Get('status/:status')
+  @CheckRoles(Roles.Admin, Roles.User)
+  async getByStatus(@Param('status') status: PatientStatus) {
+    return this.patientsService.getPatientsByStatus(status);
   }
 
   @Delete(':id')
-  async deletePatient(@Param('id', ParseIntPipe) id: number) {
-    try {
-      return await this.patientsService.deletePatient(id);
-    } catch (err) {
-      throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
-    }
+  @CheckRoles(Roles.Admin)
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.patientsService.deletePatient(id);
   }
 }

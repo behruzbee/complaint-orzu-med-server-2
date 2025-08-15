@@ -1,3 +1,4 @@
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import {
   Controller,
   Get,
@@ -26,7 +27,7 @@ import { Roles } from 'src/common/enums/roles.enum';
 import { type Response } from 'express';
 
 @Controller('message')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class MessageController {
   constructor(
     @InjectRepository(VoiceMessageEntity)
