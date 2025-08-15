@@ -1,27 +1,39 @@
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
+/**
+ * Категории обратной связи
+ */
 export enum FeedbackCategory {
-  COMPLAINT = 'complaint',
-  SUGGESTION = 'suggestion',
+  COMPLAINT = 'complaint',   // Жалоба
+  SUGGESTION = 'suggestion', // Предложение
 }
 
+/**
+ * DTO для создания обратной связи
+ */
 export class CreateFeedbackDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Имя не должно быть пустым' })
   firstName: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Фамилия не должна быть пустой' })
   lastName: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Паспорт не должен быть пустым' })
   passport: string;
 
-  @IsEnum(FeedbackCategory)
+  @IsEnum(FeedbackCategory, { message: 'Неверная категория обратной связи' })
   category: FeedbackCategory;
 
   @IsString()
-  @IsNotEmpty()
-  phoneNumber: string
+  @IsNotEmpty({ message: 'Номер телефона не должен быть пустым' })
+  phoneNumber: string;
+
+  @IsArray()
+  voiceIds: string[];
+
+  @IsArray()
+  textsIds: string[];
 }

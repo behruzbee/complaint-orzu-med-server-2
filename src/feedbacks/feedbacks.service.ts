@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FeedbackEntity } from './entities/feedback.entity';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -39,13 +39,23 @@ export class FeedbacksService {
         throw new NotFoundException('Пользователь не найден');
       }
 
-      const tempTexts = await em.find(TextMessageEntity, {
-        where: { status: BotTextMessageStatus.TEMPORARY },
-      });
+      const tempTexts = dto.textsIds?.length
+        ? await em.find(TextMessageEntity, {
+            where: {
+              status: BotTextMessageStatus.TEMPORARY,
+              id: In(dto.textsIds),
+            },
+          })
+        : [];
 
-      const tempVoices = await em.find(VoiceMessageEntity, {
-        where: { status: BotVoiceMessageStatus.TEMPORARY },
-      });
+      const tempVoices = dto.voiceIds?.length
+        ? await em.find(VoiceMessageEntity, {
+            where: {
+              status: BotVoiceMessageStatus.TEMPORARY,
+              id: In(dto.voiceIds),
+            },
+          })
+        : [];
 
       if (tempTexts.length === 0 && tempVoices.length === 0) {
         throw new NotFoundException(
