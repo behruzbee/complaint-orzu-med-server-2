@@ -1,4 +1,3 @@
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import {
   Controller,
   Get,
@@ -7,7 +6,6 @@ import {
   Body,
   Delete,
   NotFoundException,
-  UseGuards,
   Res,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,7 +25,6 @@ import { Roles } from 'src/common/enums/roles.enum';
 import { type Response } from 'express';
 
 @Controller('message')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class MessageController {
   constructor(
     @InjectRepository(VoiceMessageEntity)
@@ -40,7 +37,6 @@ export class MessageController {
   ) {}
 
   @Get('voice')
-  @CheckRoles(Roles.Admin, Roles.User)
   async getTemporaryVoiceMessages() {
     return await this.voiceRepo.find({
       where: { status: BotVoiceMessageStatus.TEMPORARY },
@@ -49,7 +45,6 @@ export class MessageController {
   }
 
   @Get('voice/:id')
-  @CheckRoles(Roles.Admin, Roles.User)
   async getVoiceMessage(@Param('id') id: string) {
     const message = await this.voiceRepo.findOne({ where: { id } });
     if (!message) {
@@ -59,7 +54,6 @@ export class MessageController {
   }
 
   @Get('text')
-  @CheckRoles(Roles.Admin, Roles.User)
   async getAllTextMessages() {
     return await this.textRepo.find({
       where: { status: BotTextMessageStatus.TEMPORARY },
@@ -68,13 +62,11 @@ export class MessageController {
   }
 
   @Post('send-text')
-  @CheckRoles(Roles.Admin)
   async sendText(@Body() body: { to: string; text: string }) {
     return await this.botService['sendTextMessage'](body.to, body.text);
   }
 
   @Delete('voice/:id')
-  @CheckRoles(Roles.Admin)
   async deleteVoice(@Param('id') id: number) {
     const result = await this.voiceRepo.delete(id);
     if (result.affected === 0) {
@@ -84,7 +76,6 @@ export class MessageController {
   }
 
   @Delete('voice/temporary/all')
-  @CheckRoles(Roles.Admin)
   async deleteAllTemporaryVoices() {
     const result = await this.voiceRepo.delete({
       status: BotVoiceMessageStatus.TEMPORARY,
@@ -111,7 +102,6 @@ export class MessageController {
   }
 
   @Delete('text/:id')
-  @CheckRoles(Roles.Admin)
   async deleteText(@Param('id') id: number) {
     const result = await this.textRepo.delete(id);
     if (result.affected === 0) {
@@ -121,7 +111,6 @@ export class MessageController {
   }
 
   @Delete('text/temporary/all')
-  @CheckRoles(Roles.Admin)
   async deleteAllTemporaryTexts() {
     const result = await this.textRepo.delete({
       status: BotTextMessageStatus.TEMPORARY,
