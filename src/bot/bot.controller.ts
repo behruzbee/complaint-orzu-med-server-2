@@ -19,9 +19,6 @@ import {
   TextMessageEntity,
 } from './entities/text_message.entity';
 import { BotService } from './services/bot.service';
-import { RolesGuard } from 'src/common/guards/roles.guard';
-import { CheckRoles } from 'src/common/decorators/roles.decorator';
-import { Roles } from 'src/common/enums/roles.enum';
 import { type Response } from 'express';
 
 @Controller('message')
