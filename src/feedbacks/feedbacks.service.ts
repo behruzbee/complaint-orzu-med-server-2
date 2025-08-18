@@ -88,16 +88,6 @@ export class FeedbacksService {
         });
       }
 
-      if (patient) {
-        await em.delete(PatientEntity, {
-          where: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            status: PatientStatus.NEW,
-          },
-        });
-      }
-
       if (!patient) {
         patient = em.create(PatientEntity, {
           firstName: dto.firstName,
