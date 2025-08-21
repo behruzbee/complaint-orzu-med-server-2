@@ -63,7 +63,6 @@ export class FeedbacksService {
         );
       }
 
-      // Ищем пациента
       let patient = await em.findOne(PatientEntity, {
         where: { phoneNumber: dto.phoneNumber, status: PatientStatus.REGULAR },
       });
@@ -73,17 +72,6 @@ export class FeedbacksService {
           where: {
             phoneNumber: dto.phoneNumber,
             status: PatientStatus.NEW,
-          },
-        });
-      }
-
-      // Если не нашли по номеру — ищем по ФИО
-      if (!patient) {
-        patient = await em.findOne(PatientEntity, {
-          where: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            status: PatientStatus.REGULAR,
           },
         });
       }
