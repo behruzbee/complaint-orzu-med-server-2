@@ -99,7 +99,7 @@ export class MessageController {
   }
 
   @Delete('text/:id')
-  async deleteText(@Param('id') id: number) {
+  async deleteText(@Param('id') id: string) {
     const result = await this.textRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Текстовое сообщение с id=${id} не найдено`);
