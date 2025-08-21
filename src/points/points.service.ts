@@ -146,6 +146,16 @@ export class PointsService {
     }
   }
 
+  async deleteAll(): Promise<void> {
+    try {
+      await this.pointsRepository.clear();
+      this.logger.log('Все точки успешно удалены');
+    } catch (error) {
+      this.logger.error('Ошибка удаления всех точек', error);
+      throw new BadRequestException('Ошибка при удалении всех точек');
+    }
+  }
+
   async findAll(): Promise<PointEntity[]> {
     try {
       return await this.pointsRepository.find({
