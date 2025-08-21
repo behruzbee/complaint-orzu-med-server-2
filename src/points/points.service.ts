@@ -47,6 +47,9 @@ export class PointsService {
       const user = await this.pointsRepository.manager.findOne(UserEntity, {
         where: { id: userId },
       });
+
+      console.log("1")
+
       if (!user) {
         throw new BadRequestException('Пользователь не найден');
       }
@@ -60,6 +63,8 @@ export class PointsService {
           createPointDto.category,
         );
       }
+
+      console.log("2")
 
       return await this.pointsRepository.save({
         ...createPointDto,
