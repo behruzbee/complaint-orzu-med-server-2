@@ -53,7 +53,7 @@ export class PointsController {
     return this.pointsService.removeLastFivePoints();
   }
 
-  @Delete('')
+  @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
   @CheckRoles(Roles.Admin)
   async deleteAll(): Promise<void> {
