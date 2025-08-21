@@ -121,4 +121,35 @@ export class FeedbacksService {
       return feedback;
     });
   }
+
+  async findAll(): Promise<FeedbackEntity[]> {
+    return this.feedbackRepository.find({
+      relations: ['user', 'patient', 'messages', 'voices'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findByPhone(phone: string): Promise<FeedbackEntity[]> {
+    return this.feedbackRepository.find({
+      where: { phoneNumber: phone },
+      relations: ['user', 'patient', 'messages', 'voices'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findByUser(userId: string): Promise<FeedbackEntity[]> {
+    return this.feedbackRepository.find({
+      where: { user: { id: userId } },
+      relations: ['user', 'patient', 'messages', 'voices'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findByStatus(status: string): Promise<FeedbackEntity[]> {
+    return this.feedbackRepository.find({
+      where: { status },
+      relations: ['user', 'patient', 'messages', 'voices'],
+      order: { createdAt: 'DESC' },
+    });
+  }
 }
