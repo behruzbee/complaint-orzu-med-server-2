@@ -148,7 +148,7 @@ export class PointsService {
 
   async deleteAll(): Promise<void> {
     try {
-      await this.pointsRepository.clear();
+      await this.pointsRepository.deleteAll();
       this.logger.log('Все точки успешно удалены');
     } catch (error) {
       this.logger.error('Ошибка удаления всех точек', error);
