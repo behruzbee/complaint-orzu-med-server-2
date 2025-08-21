@@ -137,7 +137,7 @@ export class PatientsService {
     return patient;
   }
 
-  async deletePatient(id: number): Promise<{ deleted: boolean }> {
+  async deletePatient(id: string): Promise<{ deleted: boolean }> {
     const result = await this.patientRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Пациент с id=${id} не найден`);
