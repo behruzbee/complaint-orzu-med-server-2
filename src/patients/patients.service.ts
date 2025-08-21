@@ -118,6 +118,25 @@ export class PatientsService {
     });
   }
 
+  async getPatientById(id: string) {
+    const patient = await this.patientRepository.findOne({
+      where: { id },
+      relations: [
+        'feedbacks',
+        'feedbacks.messages',
+        'feedbacks.voices',
+        'feedbacks.point',
+        'feedbacks.user',
+      ],
+    });
+
+    if (!patient) {
+      throw new NotFoundException(`Пациент с id=${id} не найден`);
+    }
+
+    return patient;
+  }
+
   async deletePatient(id: number): Promise<{ deleted: boolean }> {
     const result = await this.patientRepository.delete(id);
     if (result.affected === 0) {

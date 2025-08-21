@@ -36,6 +36,16 @@ export class PatientsController {
     return this.patientsService.getPatientsByStatus(status);
   }
 
+  @Get(':id')
+  @CheckRoles(Roles.Admin, Roles.User)
+  async getById(@Param('id') id: string) {
+    const patient = await this.patientsService.getPatientById(id);
+    if (!patient) {
+      throw new HttpException('Пациент не найден', HttpStatus.NOT_FOUND);
+    }
+    return patient;
+  }
+
   @Delete(':id')
   @CheckRoles(Roles.Admin)
   async delete(@Param('id', ParseIntPipe) id: number) {
