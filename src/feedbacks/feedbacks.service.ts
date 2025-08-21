@@ -69,10 +69,8 @@ export class FeedbacksService {
 
       if (patient) {
         await em.delete(PatientEntity, {
-          where: {
-            phoneNumber: dto.phoneNumber,
-            status: PatientStatus.NEW,
-          },
+          phoneNumber: dto.phoneNumber,
+          status: PatientStatus.NEW,
         });
       }
 

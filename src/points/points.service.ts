@@ -48,7 +48,6 @@ export class PointsService {
         where: { id: userId },
       });
 
-      console.log("1")
 
       if (!user) {
         throw new BadRequestException('Пользователь не найден');
@@ -64,7 +63,6 @@ export class PointsService {
         );
       }
 
-      console.log("2")
 
       return await this.pointsRepository.save({
         ...createPointDto,
