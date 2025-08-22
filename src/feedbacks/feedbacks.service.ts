@@ -72,6 +72,10 @@ export class FeedbacksService {
           phoneNumber: dto.phoneNumber,
           status: PatientStatus.NEW,
         });
+
+        await em.update(PatientEntity, patient.id, {
+          branch: branch,
+        });
       }
 
       if (!patient) {
