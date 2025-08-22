@@ -3,7 +3,7 @@ import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FeedbackEntity } from './entities/feedback.entity';
 import { UserEntity } from 'src/users/entities/user.entity';
-import { CreateFeedbackDto } from './dto/create.dto';
+import { CreateFeedbackDto, FeedbackCategory } from './dto/create.dto';
 import { TrelloService } from 'src/trello/trello.service';
 import {
   TextMessageEntity,
@@ -145,9 +145,9 @@ export class FeedbacksService {
     });
   }
 
-  async findByStatus(status: string): Promise<FeedbackEntity[]> {
+  async findByStatus(status: FeedbackCategory): Promise<FeedbackEntity[]> {
     return this.feedbackRepository.find({
-      where: { status },
+      where: { category: status },
       relations: ['user', 'patient', 'messages', 'voices'],
       order: { createdAt: 'DESC' },
     });

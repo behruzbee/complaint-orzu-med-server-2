@@ -6,12 +6,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FeedbacksService } from './feedbacks.service';
-import { CreateFeedbackDto } from './dto/create.dto';
 import { FeedbackEntity } from './entities/feedback.entity';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { CheckRoles } from 'src/common/decorators/roles.decorator';
 import { Roles } from 'src/common/enums/roles.enum';
+import { FeedbackCategory } from './dto/create.dto';
 
 @Controller('feedbacks')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,7 +43,7 @@ export class FeedbacksController {
   @Get('by-status/:status')
   @CheckRoles(Roles.Admin)
   async findByStatus(
-    @Param('status') status: string,
+    @Param('status') status: FeedbackCategory,
   ): Promise<FeedbackEntity[]> {
     return this.feedbacksService.findByStatus(status);
   }
