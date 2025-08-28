@@ -9,13 +9,11 @@ import {
 } from '@nestjs/common';
 import { CheckRoles } from 'src/common/decorators/roles.decorator';
 import { Roles } from 'src/common/enums/roles.enum';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create.dto';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+// @UseGuards(JwtAuthGuard, RolesGuard)
 @CheckRoles(Roles.Admin)
 export class UsersController {
   constructor(private userService: UsersService) {}
