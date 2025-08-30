@@ -30,7 +30,7 @@ export class CallStatusService {
 
   async getAll() {
     try {
-      const [items, total] = await this.callStatusRepository.findAndCount({
+      const [items, total] = await this.callStatusRepository.find({
         relations: ['user', 'patient'],
         order: { createdAt: 'DESC' },
       });
