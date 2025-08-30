@@ -53,9 +53,6 @@ export class FeedbackEntity {
   @Column({ type: 'enum', enum: FeedbackStatus, default: FeedbackStatus.INCOMING })
   status: FeedbackStatus;
 
-  @Column({ length: 20, nullable: true })
-  passport?: string | null;
-
   @Column({ length: 20 })
   phoneNumber: string;
 

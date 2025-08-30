@@ -20,10 +20,6 @@ export class CreateFeedbackDto {
   @IsNotEmpty({ message: 'Фамилия не должна быть пустой' })
   lastName: string;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Паспорт не должен быть пустым' })
-  passport: string;
-
   @IsEnum(FeedbackCategory, { message: 'Неверная категория обратной связи' })
   category: FeedbackCategory;
 
