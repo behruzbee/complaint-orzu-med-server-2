@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource } from 'typeorm';
 import { FeedbackEntity, FeedbackStatus } from './entities/feedback.entity';
 import { CreateFeedbackDto, FeedbackCategory } from './dto/create.dto';
@@ -18,15 +18,7 @@ export class FeedbacksService {
   constructor(
     @InjectRepository(FeedbackEntity)
     private readonly feedbackRepository: Repository<FeedbackEntity>,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(TextMessageEntity)
-    private readonly textRepo: Repository<TextMessageEntity>,
-    @InjectRepository(VoiceMessageEntity)
-    private readonly voiceRepo: Repository<VoiceMessageEntity>,
-    @InjectRepository(PatientEntity)
-    private readonly patientRepo: Repository<PatientEntity>,
-    private readonly dataSource: DataSource,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   async createFeedback(
