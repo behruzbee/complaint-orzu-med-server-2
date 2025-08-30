@@ -7,6 +7,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { FeedbackEntity } from 'src/feedbacks/entities/feedback.entity';
+import { CallStatusEntity } from 'src/call_status/entities/call_status.entity';
+import { PointEntity } from 'src/points/entities/points.entity';
 
 export enum PatientStatus {
   NEW = 'Поступивший',
@@ -41,6 +43,16 @@ export class PatientEntity {
     nullable: true,
   })
   feedbacks: FeedbackEntity[];
+
+  @OneToMany(() => CallStatusEntity, (call_status) => call_status.patient, {
+    nullable: true,
+  })
+  call_statuses: CallStatusEntity[];
+
+  @OneToMany(() => PointEntity, (point) => point.patient, {
+    nullable: true,
+  })
+  points: PointEntity;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

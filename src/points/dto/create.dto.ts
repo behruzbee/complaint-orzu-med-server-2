@@ -50,12 +50,6 @@ export class CreatePointDto {
   })
   branch: Branches;
 
-  @IsString()
-  @Matches(/^\d{9,15}$/, {
-    message: 'Номер телефона должен быть в международном формате',
-  })
-  phoneNumber: string;
-
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateFeedbackDto)

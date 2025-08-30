@@ -1,14 +1,14 @@
 import {
   Injectable,
+  InternalServerErrorException,
   Logger,
-  BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { PointEntity } from './entities/points.entity';
 import {
-  Branches,
+  CreateManyPointsDto,
   CreatePointDto,
   PointValue,
   TargetName,
@@ -29,198 +29,177 @@ export class PointsService {
     @InjectRepository(PointEntity)
     private readonly pointsRepository: Repository<PointEntity>,
 
-    @InjectRepository(FeedbackEntity)
-    private readonly feedbackRepository: Repository<FeedbackEntity>,
-
-    @InjectRepository(PatientEntity)
-    private readonly patientRepository: Repository<PatientEntity>,
-
     private readonly feedbacksService: FeedbacksService,
+
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
-  async create(
-    createPointDto: CreatePointDto,
-    userId: string,
-    phoneNumber?: string,
-  ): Promise<PointEntity> {
-    try {
-      const user = await this.pointsRepository.manager.findOne(UserEntity, {
-        where: { id: userId },
+  private async getUserOrThrow(userId: string) {
+    const user = await this.pointsRepository.manager.findOne(UserEntity, {
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('Пользователь не найден');
+    return user;
+  }
+
+  private async getOrCreateRegularPatient(
+    em: Repository<PatientEntity> | any,
+    phoneNumber: string,
+    branch?: string,
+  ) {
+    let patient = await em.findOne(PatientEntity, {
+      where: { phoneNumber, status: PatientStatus.REGULAR },
+    });
+
+    if (!patient) {
+      const existingNew = await em.findOne(PatientEntity, {
+        where: { phoneNumber, status: PatientStatus.NEW },
       });
 
-
-      if (!user) {
-        throw new BadRequestException('Пользователь не найден');
+      if (existingNew) {
+        await em.update(PatientEntity, existingNew.id, {
+          status: PatientStatus.REGULAR,
+          ...(branch ? { branch } : {}),
+        });
+        patient = await em.findOne(PatientEntity, {
+          where: { id: existingNew.id },
+        });
+      } else {
+        patient = em.create(PatientEntity, {
+          phoneNumber,
+          status: PatientStatus.REGULAR,
+          ...(branch ? { branch } : {}),
+        });
+        patient = await em.save(patient);
       }
+    } else if (branch && patient.branch !== branch) {
+      await em.update(PatientEntity, patient.id, { branch });
+      patient.branch = branch as any;
+    }
+
+    return patient;
+  }
+
+  async create(
+    dto: CreatePointDto,
+    userId: string,
+    phoneNumber: string,
+  ): Promise<PointEntity> {
+    return await this.dataSource.transaction(async (manager) => {
+      const user = await this.getUserOrThrow(userId);
+      const patient = await this.getOrCreateRegularPatient(
+        manager,
+        phoneNumber,
+        dto.branch,
+      );
 
       let feedback: FeedbackEntity | null = null;
-      if (createPointDto.feedback) {
+      if (dto.feedback) {
         feedback = await this.feedbacksService.createFeedback(
-          createPointDto.feedback,
+          dto.feedback,
           userId,
-          createPointDto.branch,
-          createPointDto.category,
+          dto.branch,
         );
       }
 
-
-      return await this.pointsRepository.save({
-        ...createPointDto,
+      const point = manager.create(PointEntity, {
+        ...dto,
         user,
+        patient,
         feedback,
-        phoneNumber: phoneNumber || createPointDto.phoneNumber,
       });
-    } catch (error) {
-      this.logger.error('Ошибка создания Point', error);
-      throw new BadRequestException('Ошибка при создании точки');
-    }
+
+      return await manager.save(point);
+    });
   }
 
   async createMany(
-    createPointDtos: CreatePointDto[],
+    { branch, phoneNumber, points }: CreateManyPointsDto,
     userId: string,
-    branch: Branches,
-    phoneNumber: string,
   ): Promise<PointEntity[]> {
-    try {
-      const createdPoints: PointEntity[] = [];
+    return await this.dataSource.transaction(async (manager) => {
+      const user = await this.getUserOrThrow(userId);
+      const patient = await this.getOrCreateRegularPatient(
+        manager,
+        phoneNumber,
+        branch,
+      );
 
       const MAX_POINTS = PointValue.FIVE;
       const categories = Object.values(TargetName);
+      const map = new Map<string, CreatePointDto>();
+      for (const p of points || []) map.set(p.category, p);
 
-      const dtoMap = new Map<string, CreatePointDto>();
-      for (const dto of createPointDtos) {
-        dtoMap.set(dto.category, dto);
-      }
-
-      for (const category of categories) {
-        let dto = dtoMap.get(category);
-
-        if (!dto) {
-          if (!branch) {
-            throw new BadRequestException(
-              'Не указан филиал для заполнения недостающих точек',
-            );
-          }
-
-          dto = {
-            category,
+      // fill missing categories with default 5
+      const completeDtos: CreatePointDto[] = categories.map(
+        (category) =>
+          map.get(category) ||
+          ({
+            category: category as TargetName,
             points: MAX_POINTS,
             branch,
-            phoneNumber,
-          };
-        }
+          } as CreatePointDto),
+      );
 
-        const created = await this.create(dto, userId, phoneNumber);
-        createdPoints.push(created);
-      }
-
-      if (phoneNumber) {
-        const patient = await this.patientRepository.findOneBy({
-          phoneNumber: phoneNumber,
-          status: PatientStatus.REGULAR,
-        });
-
-        if (patient) {
-          await this.patientRepository.delete({
-            phoneNumber: phoneNumber,
-            status: PatientStatus.NEW,
-          });
-        }
-
-        if (!patient) {
-          await this.patientRepository.update(
-            {
-              phoneNumber: phoneNumber,
-              status: PatientStatus.NEW,
-            },
-            { status: PatientStatus.REGULAR },
+      // Optionally create feedbacks per DTO (only when provided)
+      const feedbacksByCategory = new Map<string, FeedbackEntity>();
+      for (const d of completeDtos) {
+        if (d.feedback) {
+          const fb = await this.feedbacksService.createFeedback(
+            d.feedback,
+            userId,
+            d.branch,
           );
+          feedbacksByCategory.set(d.category, fb);
         }
       }
 
-      return createdPoints;
-    } catch (error) {
-      this.logger.error('Ошибка создания множества точек', error);
-      throw new BadRequestException('Ошибка при создании множества точек');
-    }
+      const entities = completeDtos.map((d) =>
+        manager.create(PointEntity, {
+          ...d,
+          user,
+          patient,
+          feedback: feedbacksByCategory.get(d.category) || null,
+        }),
+      );
+
+      return await manager.save(PointEntity, entities);
+    });
   }
 
   async deleteAll(): Promise<void> {
     try {
-      await this.pointsRepository.deleteAll();
+      await this.pointsRepository.clear();
       this.logger.log('Все точки успешно удалены');
-    } catch (error) {
-      this.logger.error('Ошибка удаления всех точек', error);
-      throw new BadRequestException('Ошибка при удалении всех точек');
+    } catch (e) {
+      this.logger.error('Ошибка удаления всех точек', e?.message || e);
+      throw new InternalServerErrorException('Ошибка при удалении всех точек');
     }
   }
 
   async findAll(): Promise<PointEntity[]> {
     try {
       return await this.pointsRepository.find({
-        relations: ['feedback', 'user'],
+        relations: ['feedback', 'user', 'patient'],
       });
-    } catch (error) {
-      this.logger.error('Ошибка получения всех точек', error);
-      throw new BadRequestException('Ошибка при получении точек');
-    }
-  }
-
-  async findWithFeedback(): Promise<PointEntity[]> {
-    try {
-      return await this.pointsRepository.find({
-        where: {
-          feedback: In(
-            await this.feedbackRepository
-              .find()
-              .then((fbs) => fbs.map((fb) => fb.id)),
-          ),
-        },
-        relations: ['feedback', 'user'],
-      });
-    } catch (error) {
-      this.logger.error('Ошибка получения точек с feedback', error);
-      throw new BadRequestException('Ошибка при получении точек с отзывами');
+    } catch (e) {
+      this.logger.error('Ошибка получения всех точек', e?.message || e);
+      throw new InternalServerErrorException('Ошибка при получении точек');
     }
   }
 
   async removeLastFivePoints(): Promise<void> {
     try {
-      const lastFivePoints = await this.pointsRepository.find({
+      const lastFive = await this.pointsRepository.find({
         order: { createdAt: 'DESC' },
         take: 5,
-        relations: ['feedback'],
       });
-
-      for (const point of lastFivePoints) {
-        if (point.feedback) {
-          await this.feedbackRepository.delete(point.feedback.id);
-          this.logger.log(
-            `Удалён feedback с id ${point.feedback.id} для point ${point.id}`,
-          );
-        }
-      }
-
-      await this.pointsRepository.remove(lastFivePoints);
+      if (!lastFive.length) return;
+      await this.pointsRepository.remove(lastFive); // feedback is kept or nulled based on relation onDelete
       this.logger.log('Удалены последние 5 точек');
-    } catch (error) {
-      this.logger.error('Ошибка удаления последних 5 точек', error);
-      throw new BadRequestException('Ошибка при удалении точек');
-    }
-  }
-
-  async findOne(id: string): Promise<PointEntity> {
-    try {
-      const point = await this.pointsRepository.findOne({
-        where: { id },
-        relations: ['feedback', 'user'],
-      });
-      if (!point) throw new NotFoundException('Точка не найдена');
-      return point;
-    } catch (error) {
-      this.logger.error(`Ошибка получения точки по id ${id}`, error);
-      throw new BadRequestException('Ошибка при получении точки');
+    } catch (e) {
+      this.logger.error('Ошибка удаления последних 5 точек', e?.message || e);
+      throw new InternalServerErrorException('Ошибка при удалении точек');
     }
   }
 }

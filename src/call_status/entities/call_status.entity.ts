@@ -1,3 +1,4 @@
+import { PatientEntity } from 'src/patients/entities/patient.entity';
 import { Branches } from 'src/points/dto/create.dto';
 import { UserEntity } from 'src/users/entities/user.entity';
 import {
@@ -6,6 +7,7 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  Index,
 } from 'typeorm';
 
 export enum CallStatusType {
@@ -16,6 +18,8 @@ export enum CallStatusType {
 }
 
 @Entity('call_statuses')
+@Index(['phoneNumber'])
+@Index(['createdAt'])
 export class CallStatusEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -26,7 +30,7 @@ export class CallStatusEntity {
   })
   status: CallStatusType;
 
-  @Column()
+  @Column({ length: 20 })
   phoneNumber: string;
 
   @Column({
@@ -39,7 +43,14 @@ export class CallStatusEntity {
   createdAt: Date;
 
   @ManyToOne(() => UserEntity, (user) => user.call_statuses, {
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
+    nullable: true,
   })
-  user: UserEntity;
+  user: UserEntity | null;
+
+  @ManyToOne(() => PatientEntity, (patient) => patient.call_statuses, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  patient: PatientEntity | null;
 }

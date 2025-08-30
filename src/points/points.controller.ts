@@ -13,37 +13,16 @@ import { Roles } from "src/common/enums/roles.enum";
 export class PointsController {
   constructor(private readonly pointsService: PointsService) {}
 
-  @Post()
-  @CheckRoles(Roles.Admin, Roles.User)
-  async create(
-    @Body() createPointDto: CreatePointDto,
-    @CurrentUser() user: CurrentUserPayload,
-  ): Promise<PointEntity> {
-    return this.pointsService.create({ ...createPointDto}, user.id);
-  }
-
   @Post('bulk')
   @CheckRoles(Roles.Admin)
   async createMany(@Body() createPointDtos: CreateManyPointsDto, @CurrentUser() user: CurrentUserPayload): Promise<PointEntity[]> {
-    return this.pointsService.createMany(createPointDtos.points, user.id, createPointDtos.branch, createPointDtos.phoneNumber);
+    return this.pointsService.createMany(createPointDtos, user.id);
   }
 
   @Get()
   @CheckRoles(Roles.Admin, Roles.User)
   async findAll(): Promise<PointEntity[]> {
     return this.pointsService.findAll();
-  }
-
-  @Get('with-feedback')
-  @CheckRoles(Roles.Admin)
-  async findWithFeedback(): Promise<PointEntity[]> {
-    return this.pointsService.findWithFeedback();
-  }
-
-  @Get(':id')
-  @CheckRoles(Roles.Admin, Roles.User)
-  async findOne(@Param('id') id: string): Promise<PointEntity> {
-    return this.pointsService.findOne(id);
   }
 
   @Delete('last-five')
@@ -53,7 +32,7 @@ export class PointsController {
     return this.pointsService.removeLastFivePoints();
   }
 
-  @Delete()
+  @Delete('/all')
   @HttpCode(HttpStatus.NO_CONTENT)
   @CheckRoles(Roles.Admin)
   async deleteAll(): Promise<void> {
