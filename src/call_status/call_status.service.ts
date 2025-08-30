@@ -7,7 +7,7 @@ import {
 import { CreateCallStatusDto } from './dto/create.dto';
 import { Repository } from 'typeorm';
 import { CallStatusEntity } from './entities/call_status.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
 import {
   PatientEntity,
@@ -24,8 +24,8 @@ export class CallStatusService {
     private readonly callStatusRepository: Repository<CallStatusEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(PatientEntity)
-    private readonly dataSource: DataSource,
+    @InjectDataSource()
+    private readonly dataSource: DataSource, // теперь правильно
   ) {}
 
   async getAll(paging: { take: number; skip: number } = { take: 50, skip: 0 }) {
