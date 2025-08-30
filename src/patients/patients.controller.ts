@@ -48,7 +48,7 @@ export class PatientsController {
 
   @Delete(':id')
   @CheckRoles(Roles.Admin)
-  async delete(@Param('id', ParseIntPipe) id: string) {
+  async delete(@Param('id') id: string) {
     return this.patientsService.deletePatient(id);
   }
 }
