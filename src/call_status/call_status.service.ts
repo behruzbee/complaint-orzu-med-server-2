@@ -28,7 +28,7 @@ export class CallStatusService {
     private readonly dataSource: DataSource, // теперь правильно
   ) {}
 
-  async getAll(paging: { take: number; skip: number } = { take: 50, skip: 0 }) {
+  async getAll(paging: { take: number; skip: number } = { take: 99999999999999999999999999999999, skip: 0 }) {
     try {
       const [items, total] = await this.callStatusRepository.findAndCount({
         relations: ['user', 'patient'],
