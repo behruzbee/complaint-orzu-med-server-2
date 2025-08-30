@@ -28,15 +28,13 @@ export class CallStatusService {
     private readonly dataSource: DataSource, // теперь правильно
   ) {}
 
-  async getAll(paging: { take: number; skip: number } = { take: 99999999999999999999999999999999, skip: 0 }) {
+  async getAll() {
     try {
       const [items, total] = await this.callStatusRepository.findAndCount({
         relations: ['user', 'patient'],
         order: { createdAt: 'DESC' },
-        take: paging.take,
-        skip: paging.skip,
       });
-      return { items, total, take: paging.take, skip: paging.skip };
+      return { items, total };
     } catch (error) {
       this.logger.error('Ошибка при получении статусов звонков', error);
       throw new InternalServerErrorException(
