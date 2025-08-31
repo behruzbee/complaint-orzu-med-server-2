@@ -25,16 +25,16 @@ export class CallStatusService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectDataSource()
-    private readonly dataSource: DataSource, // теперь правильно
+    private readonly dataSource: DataSource,
   ) {}
 
   async getAll() {
     try {
-      const [items, total] = await this.callStatusRepository.find({
+      const callStatuses = await this.callStatusRepository.find({
         relations: ['user', 'patient'],
         order: { createdAt: 'DESC' },
       });
-      return { items, total };
+      return callStatuses;
     } catch (error) {
       this.logger.error('Ошибка при получении статусов звонков', error);
       throw new InternalServerErrorException(

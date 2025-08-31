@@ -14,12 +14,9 @@ export enum CallStatusType {
   NO_ANSWER = 'no_answer',
   WRONG_NUMBER = 'wrong_number',
   NO_CONNECTION = 'no_connection',
-  ANSWERED = 'answered',
 }
 
 @Entity('call_statuses')
-@Index(['phoneNumber'])
-@Index(['createdAt'])
 export class CallStatusEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
