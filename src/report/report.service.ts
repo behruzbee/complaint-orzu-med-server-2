@@ -76,30 +76,11 @@ export class ReportService {
         },
       });
 
-      const answeredCalls = await this.callStatusRepo.count({
-        where: {
-          status: CallStatusType.ANSWERED,
-          branch,
-          createdAt: this.between(startDate, endDate),
-        },
-      });
-
-      const unansweredCalls = totalPatients - answeredCalls;
-
-      const percentAnswered = totalPatients
-        ? ((answeredCalls / totalPatients) * 100).toFixed(2)
-        : 0;
-
-      const percentUnanswered = totalPatients
-        ? ((unansweredCalls / totalPatients) * 100).toFixed(2)
-        : 0;
-
       // === Детализация по статусам звонков ===
       const callStatusCounts: Record<CallStatusType, number> = {
         [CallStatusType.NO_ANSWER]: 0,
         [CallStatusType.WRONG_NUMBER]: 0,
         [CallStatusType.NO_CONNECTION]: 0,
-        [CallStatusType.ANSWERED]: 0,
       };
 
       for (const status of Object.values(CallStatusType)) {
@@ -157,14 +138,9 @@ export class ReportService {
         index++,
         branch,
         totalPatients,
-        answeredCalls,
-        percentAnswered,
-        unansweredCalls,
-        percentUnanswered,
         callStatusCounts[CallStatusType.NO_ANSWER],
         callStatusCounts[CallStatusType.WRONG_NUMBER],
         callStatusCounts[CallStatusType.NO_CONNECTION],
-        callStatusCounts[CallStatusType.ANSWERED],
         pointsByCategory[TargetName.DOCTORS],
         pointsByCategory[TargetName.NURSES],
         pointsByCategory[TargetName.CLEANING],
