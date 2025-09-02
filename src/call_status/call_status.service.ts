@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { CreateCallStatusDto } from './dto/create.dto';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CallStatusEntity } from './entities/call_status.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -52,7 +52,11 @@ export class CallStatusService {
     return user;
   }
 
-  private async getOrCreatePatientInTx(manager: any, phoneNumber: string) {
+  private async getOrCreatePatientInTx(
+    manager: EntityManager,
+    phoneNumber: string,
+    branch: string,
+  ) {
     if (!phoneNumber) return null;
 
     // Prefer REGULAR patient
@@ -60,7 +64,13 @@ export class CallStatusService {
       where: { phoneNumber, status: PatientStatus.REGULAR },
     });
 
-    if (patient) return patient;
+    if (patient) {
+      if (patient.branch !== branch) {
+        patient.branch = branch;
+        patient = await manager.save(patient);
+      }
+      return patient;
+    }
 
     await manager.delete(PatientEntity, {
       phoneNumber,
@@ -78,7 +88,7 @@ export class CallStatusService {
     callStatusDto: CreateCallStatusDto,
     userId: string,
   ): Promise<CallStatusEntity> {
-    const { phoneNumber } = callStatusDto;
+    const { phoneNumber, branch } = callStatusDto;
     return await this.dataSource.transaction(async (manager) => {
       try {
         const user = await this.getUserOrThrow(userId);
@@ -86,10 +96,14 @@ export class CallStatusService {
         const newStatus = manager.create(CallStatusEntity, {
           status: callStatusDto.status,
           phoneNumber,
-          branch: callStatusDto.branch,
+          branch,
         });
 
-        const patient = await this.getOrCreatePatientInTx(manager, phoneNumber);
+        const patient = await this.getOrCreatePatientInTx(
+          manager,
+          phoneNumber,
+          branch,
+        );
         newStatus.patient = patient || null;
         newStatus.user = user;
 
