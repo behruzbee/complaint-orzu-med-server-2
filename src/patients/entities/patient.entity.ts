@@ -23,11 +23,11 @@ export class PatientEntity {
   @Column()
   phoneNumber: string;
 
-  @Column()
-  firstName: string;
+  @Column({ nullable: true })
+  firstName?: string;
 
-  @Column()
-  lastName: string;
+  @Column({ nullable: true })
+  lastName?: string;
 
   @Column({ name: 'branch', nullable: true })
   branch: string;
