@@ -18,12 +18,12 @@ export class WhatsappAuthService {
     if (this.client || this.initializing) return;
 
     this.initializing = true;
+    this.logger.log('🚀 Запуск WhatsApp клиента...');
+
     this.client = new Client({
       authStrategy: new LocalAuth(),
+      puppeteer: { args: ['--no-sandbox'] },
       webVersionCache: { type: 'none' },
-      puppeteer: {
-        args: ['--no-sandbox'],
-      },
     });
 
     this.client.on('qr', (qr) => {
@@ -37,24 +37,40 @@ export class WhatsappAuthService {
       this.logger.log('✅ WhatsApp клиент авторизован и готов');
     });
 
-    this.client.on('disconnected', () => {
-      this.logger.warn('⚠️ WhatsApp клиент отключен');
+    this.client.on('disconnected', async () => {
+      this.logger.warn('⚠️ WhatsApp клиент отключен, пробуем переподключиться...');
       this.client = null;
       this.qrCode = null;
       this.isReady = false;
+      await this.reconnect();
     });
 
-    await this.client.initialize();
-    this.initializing = false;
+    try {
+      await this.client.initialize();
+    } catch (e) {
+      this.logger.error(`❌ Ошибка инициализации: ${e.message}`);
+      this.client = null;
+    } finally {
+      this.initializing = false;
+    }
+  }
+
+  /** 🔄 Попробовать переподключение */
+  private async reconnect() {
+    await new Promise((res) => setTimeout(res, 5000)); // пауза 5 сек
+    this.logger.log('🔄 Переподключение WhatsApp клиента...');
+    await this.initClient();
   }
 
   /** 📌 Получение QR для фронта */
   async getQrCode(): Promise<{ qr: string | null; isReady: boolean }> {
-    await this.initClient();
+    if (!this.client && !this.initializing) {
+      await this.initClient();
+    }
     return { qr: this.qrCode, isReady: this.isReady };
   }
 
-  /** 📌 Отключение WhatsApp клиента */
+  /** 📌 Отключение WhatsApp клиента вручную */
   async disconnect(): Promise<{ disconnected: boolean }> {
     if (this.client) {
       try {
@@ -68,28 +84,18 @@ export class WhatsappAuthService {
     this.qrCode = null;
     this.isReady = false;
     this.initializing = false;
-
     return { disconnected: true };
   }
 
-  /** 🔄 Умная задержка */
+  /** 🔄 Умная задержка (между сообщениями) */
   private async delay() {
     const ms = Math.floor(Math.random() * (15000 - 8000 + 1)) + 8000;
     this.logger.log(`⏳ Пауза ${ms / 1000} сек...`);
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /** 📌 Отправить приветственное сообщение всем временным пациентам */
-  async sendWelcomeMessages() {
-    if (!this.client || !this.isReady) {
-      throw new Error('❌ WhatsApp клиент не авторизован');
-    }
-
-    const patients = await this.patientsService.getPatientsByStatus(
-      PatientStatus.NEW,
-    );
-    let processed = 0;
-
+  /** 📌 Определение языка по номеру */
+  private getMessageByPhone(phone: string): string {
     const messageUz = `Ассалому алайкум, ҳурматли беморимиз! 🌸  
 Мен – Orzu Medical клиникасидан Дурдона.  
 
@@ -106,20 +112,47 @@ export class WhatsappAuthService {
 
 Сіздің пікіріңіз біз үшін өте маңызды! 💙`;
 
+    const messageRu = `Здравствуйте, уважаемый пациент! 🌸  
+Я – Дурдона из клиники Orzu Medical.  
+
+Как вы себя чувствуете после посещения нашей клиники?  
+Вам понравилось качество наших услуг?  
+
+Ваше мнение очень важно для нас! 💙`;
+
+    if (phone.startsWith('998')) {
+      return messageUz;
+    } else if (phone.startsWith('7') || phone.startsWith('8')) {
+      return messageKz;
+    } else {
+      return messageRu;
+    }
+  }
+
+  /** 📌 Отправить приветственное сообщение всем новым пациентам */
+  async sendWelcomeMessages() {
+    if (!this.client || !this.isReady) {
+      throw new Error('❌ WhatsApp клиент не авторизован');
+    }
+
+    const patients = await this.patientsService.getPatientsByStatus(
+      PatientStatus.NEW,
+    );
+    let processed = 0;
+
     for (const p of patients) {
       try {
-
-        if(!this.client) return ;
+        if (!this.client) return;
         const chatId = `${p.phoneNumber}@c.us`;
 
-        await this.client.sendMessage(chatId, messageUz);
-        await this.delay();
-        await this.client.sendMessage(chatId, messageKz);
+        const message = this.getMessageByPhone(p.phoneNumber);
 
-        this.logger.log(`✅ Хабар юборилди: ${p.lastName} ${p.firstName}`);
+        await this.client.sendMessage(chatId, message);
+
+        this.logger.log(`✅ Сообщение отправлено: ${p.lastName} ${p.firstName}`);
         processed++;
       } catch (e) {
-        this.logger.error(`❌ Хато: ${p.phoneNumber} → ${e.message}`);
+        this.logger.error(`❌ Ошибка: ${p.phoneNumber} → ${e.message}`);
       }
 
       await this.delay();
