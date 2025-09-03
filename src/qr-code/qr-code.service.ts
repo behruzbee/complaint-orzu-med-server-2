@@ -108,6 +108,8 @@ export class WhatsappAuthService {
 
     for (const p of patients) {
       try {
+
+        if(!this.client) return ;
         const chatId = `${p.phoneNumber}@c.us`;
 
         await this.client.sendMessage(chatId, messageUz);
