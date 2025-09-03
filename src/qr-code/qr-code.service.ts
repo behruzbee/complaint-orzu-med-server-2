@@ -22,12 +22,24 @@ export class WhatsappAuthService {
 
     this.client = new Client({
       authStrategy: new LocalAuth(),
-      puppeteer: { args: ['--no-sandbox'] },
+      puppeteer: {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu',
+        ],
+      },
       webVersionCache: { type: 'none' },
     });
 
     this.client.on('qr', (qr) => {
-      this.qrCode = qr;
+      this.qrCode = qr; // можно конвертировать через qrcode.toDataURL если нужен Base64
       this.isReady = false;
       this.logger.log('🔑 Новый QR-код получен');
     });
@@ -37,12 +49,12 @@ export class WhatsappAuthService {
       this.logger.log('✅ WhatsApp клиент авторизован и готов');
     });
 
-    this.client.on('disconnected', async () => {
-      this.logger.warn('⚠️ WhatsApp клиент отключен, пробуем переподключиться...');
-      this.client = null;
-      this.qrCode = null;
-      this.isReady = false;
-      await this.reconnect();
+    // Игнорируем отключение, чтобы клиент не удалялся
+    this.client.on('disconnected', (reason) => {
+      this.logger.warn(
+        `⚠️ Клиент получил disconnected: ${reason}, но мы игнорируем`,
+      );
+      // Не удаляем this.client, не сбрасываем QR, не меняем isReady
     });
 
     try {
@@ -149,7 +161,9 @@ export class WhatsappAuthService {
 
         await this.client.sendMessage(chatId, message);
 
-        this.logger.log(`✅ Сообщение отправлено: ${p.lastName} ${p.firstName}`);
+        this.logger.log(
+          `✅ Сообщение отправлено: ${p.lastName} ${p.firstName}`,
+        );
         processed++;
       } catch (e) {
         this.logger.error(`❌ Ошибка: ${p.phoneNumber} → ${e.message}`);
