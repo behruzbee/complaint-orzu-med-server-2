@@ -21,6 +21,9 @@ export class WhatsappAuthService {
     this.client = new Client({
       authStrategy: new LocalAuth(),
       webVersionCache: { type: 'none' },
+      puppeteer: {
+        args: ['--no-sandbox'],
+      },
     });
 
     this.client.on('qr', (qr) => {
