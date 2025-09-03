@@ -39,7 +39,7 @@ export class WhatsappAuthService {
     });
 
     this.client.on('qr', (qr) => {
-      this.qrCode = qr; // можно конвертировать через qrcode.toDataURL если нужен Base64
+      this.qrCode = qr;
       this.isReady = false;
       this.logger.log('🔑 Новый QR-код получен');
     });
@@ -65,13 +65,6 @@ export class WhatsappAuthService {
     } finally {
       this.initializing = false;
     }
-  }
-
-  /** 🔄 Попробовать переподключение */
-  private async reconnect() {
-    await new Promise((res) => setTimeout(res, 5000)); // пауза 5 сек
-    this.logger.log('🔄 Переподключение WhatsApp клиента...');
-    await this.initClient();
   }
 
   /** 📌 Получение QR для фронта */
@@ -154,7 +147,9 @@ export class WhatsappAuthService {
 
     for (const p of patients) {
       try {
-        if (!this.client) return;
+        if (!this.client || !this.isReady) {
+          throw new Error('❌ WhatsApp клиент не авторизован');
+        }
         const chatId = `${p.phoneNumber}@c.us`;
 
         const message = this.getMessageByPhone(p.phoneNumber);
