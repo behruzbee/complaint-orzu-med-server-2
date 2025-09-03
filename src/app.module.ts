@@ -19,6 +19,7 @@ import { TrelloCardEntity } from './trello/entities/trello.entity';
 import { PatientEntity } from './patients/entities/patient.entity';
 import { PatientsModule } from './patients/patients.module';
 import { ReportModule } from './report/report.module';
+import { WhatsappModule } from './qr-code/qr-code.module';
 
 @Module({
   imports: [
@@ -59,7 +60,8 @@ import { ReportModule } from './report/report.module';
     BotModule,
     TrelloModule,
     FeedbacksModule,
-    PatientsModule
+    PatientsModule,
+    WhatsappModule
   ],
 })
 export class AppModule {}

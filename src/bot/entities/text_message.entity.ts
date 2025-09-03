@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   UpdateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 
 export enum BotTextMessageStatus {
@@ -16,7 +17,7 @@ export enum BotTextMessageStatus {
 @Entity('text_messages')
 export class TextMessageEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: number;
+  id: string;
 
   @Column()
   sender: string; // номер отправителя
@@ -33,7 +34,9 @@ export class TextMessageEntity {
 
   @ManyToOne(() => FeedbackEntity, (feedback) => feedback.messages, {
     nullable: true,
+    onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'feedbackId' })
   feedback: FeedbackEntity | null;
 
   @CreateDateColumn()

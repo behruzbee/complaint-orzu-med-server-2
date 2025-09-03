@@ -64,7 +64,7 @@ export class MessageController {
   }
 
   @Delete('voice/:id')
-  async deleteVoice(@Param('id') id: number) {
+  async deleteVoice(@Param('id') id: string) {
     const result = await this.voiceRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Голосовое сообщение с id=${id} не найдено`);
