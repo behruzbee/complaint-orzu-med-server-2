@@ -148,6 +148,7 @@ export class PointsService {
           const fb = await this.feedbacksService.createFeedback(
             d.feedback,
             userId,
+            manager,
           );
           feedbacksByCategory.set(d.category, fb);
         }
