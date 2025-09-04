@@ -32,6 +32,7 @@ export class FeedbacksService {
 
       const { phoneNumber } = dto;
 
+      // 1. Забираем временные сообщения
       const tempTexts = dto.textsIds?.length
         ? await em.find(TextMessageEntity, {
             where: {
@@ -55,18 +56,13 @@ export class FeedbacksService {
         );
       }
 
-      // Upsert patient (NEW -> REGULAR), set/ensure branch
+      // 2. Upsert пациента
       let patient = await em.findOne(PatientEntity, {
-        where: { phoneNumber, status: PatientStatus.REGULAR },
+        where: { phoneNumber },
       });
-      if (patient) {
-        await em.update(PatientEntity, patient.id, { branch });
-      } else {
-        // Remove possible NEW duplicates for this phone
-        await em.delete(PatientEntity, {
-          phoneNumber,
-          status: PatientStatus.NEW,
-        });
+
+      if (!patient) {
+        // Новый пациент
         patient = em.create(PatientEntity, {
           firstName: dto.firstName,
           lastName: dto.lastName,
@@ -74,9 +70,17 @@ export class FeedbacksService {
           branch,
           status: PatientStatus.REGULAR,
         });
+        await em.save(patient);
+      } else {
+        // Существующий пациент → обновляем статус и филиал
+        patient.status = PatientStatus.REGULAR;
+        if (branch) patient.branch = branch;
+        if (dto.firstName) patient.firstName = dto.firstName;
+        if (dto.lastName) patient.lastName = dto.lastName;
         patient = await em.save(patient);
       }
 
+      // 3. Создаём обратную связь
       const feedback = em.create(FeedbackEntity, {
         ...dto,
         user,
@@ -89,22 +93,26 @@ export class FeedbacksService {
       });
       await em.save(feedback);
 
-      // Update message statuses and link to feedback
-      for (const text of tempTexts) {
-        text.status = BotTextMessageStatus.SAVED;
-        text.feedback = feedback;
+      // 4. Привязываем сообщения к feedback
+      if (tempTexts.length) {
+        for (const text of tempTexts) {
+          text.status = BotTextMessageStatus.SAVED;
+          text.feedback = feedback;
+        }
+        await em.save(tempTexts);
       }
-      if (tempTexts.length) await em.save(tempTexts);
 
-      for (const voice of tempVoices) {
-        voice.status = BotVoiceMessageStatus.SAVED;
-        voice.feedback = feedback;
+      if (tempVoices.length) {
+        for (const voice of tempVoices) {
+          voice.status = BotVoiceMessageStatus.SAVED;
+          voice.feedback = feedback;
+        }
+        await em.save(tempVoices);
       }
-      if (tempVoices.length) await em.save(tempVoices);
 
-      // Fire-and-forget integrations *after* commit
+      // 🔄 Можно подключить интеграции после коммита
       setImmediate(() => {
-        // example: this.trelloService?.createCardForFeedback(feedback, branch, category).catch(console.error);
+        // this.trelloService?.createCardForFeedback(feedback, branch, dto.category).catch(console.error);
       });
 
       return feedback;
