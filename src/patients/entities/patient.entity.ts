@@ -39,6 +39,9 @@ export class PatientEntity {
   })
   status: PatientStatus;
 
+  @Column({ nullable: true })
+  checkOutTime: string;
+
   @OneToMany(() => FeedbackEntity, (feedback) => feedback.patient, {
     nullable: true,
   })
