@@ -66,6 +66,7 @@ export class CallStatusService {
 
     console.log(patient)
     console.log(phoneNumber)
+    console.log("Hello World!")
 
     if (patient) {
       if (patient.status === PatientStatus.NEW) {
