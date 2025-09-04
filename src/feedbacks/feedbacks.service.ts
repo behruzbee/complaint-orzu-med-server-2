@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, DataSource } from 'typeorm';
+import { Repository, In, DataSource, EntityManager } from 'typeorm';
 import { FeedbackEntity, FeedbackStatus } from './entities/feedback.entity';
 import { CreateFeedbackDto, FeedbackCategory } from './dto/create.dto';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -21,83 +21,67 @@ export class FeedbacksService {
   async createFeedback(
     dto: CreateFeedbackDto,
     userId: string,
+    manager?: EntityManager,
   ): Promise<FeedbackEntity> {
-    return await this.dataSource.transaction(async (em) => {
-      const user = await em.findOne(UserEntity, { where: { id: userId } });
-      if (!user) throw new NotFoundException('Пользователь не найден');
+    const em = manager ?? this.dataSource.manager;
 
-      const { phoneNumber } = dto;
+    const user = await em.findOne(UserEntity, { where: { id: userId } });
+    if (!user) throw new NotFoundException('Пользователь не найден');
 
-      // 1. Забираем временные сообщения
-      const tempTexts = dto.textsIds?.length
-        ? await em.find(TextMessageEntity, {
-            where: {
-              status: BotTextMessageStatus.TEMPORARY,
-              id: In(dto.textsIds),
-            },
-          })
-        : [];
-      const tempVoices = dto.voiceIds?.length
-        ? await em.find(VoiceMessageEntity, {
-            where: {
-              status: BotVoiceMessageStatus.TEMPORARY,
-              id: In(dto.voiceIds),
-            },
-          })
-        : [];
+    const { phoneNumber } = dto;
 
-      if (tempTexts.length === 0 && tempVoices.length === 0) {
-        throw new NotFoundException(
-          'Нет временных сообщений для создания обратной связи',
-        );
-      }
+    const tempTexts = dto.textsIds?.length
+      ? await em.find(TextMessageEntity, {
+          where: {
+            status: BotTextMessageStatus.TEMPORARY,
+            id: In(dto.textsIds),
+          },
+        })
+      : [];
 
-      let patient = await em.findOne(PatientEntity, {
-        where: { phoneNumber },
-      });
+    const tempVoices = dto.voiceIds?.length
+      ? await em.find(VoiceMessageEntity, {
+          where: {
+            status: BotVoiceMessageStatus.TEMPORARY,
+            id: In(dto.voiceIds),
+          },
+        })
+      : [];
 
-      if (!patient) {
-        throw new NotFoundException(
-          'Не найден пациент',
-        );
-      }
+    if (tempTexts.length === 0 && tempVoices.length === 0) {
+      throw new NotFoundException(
+        'Нет временных сообщений для создания обратной связи',
+      );
+    }
 
-      const feedback = em.create(FeedbackEntity, {
-        ...dto,
-        user,
-        messages: tempTexts,
-        voices: tempVoices,
-        patient,
-        phoneNumber,
-        status: FeedbackStatus.INCOMING,
-        category: dto.category,
-      });
-      await em.save(feedback);
+    const patient = await em.findOne(PatientEntity, { where: { phoneNumber } });
+    if (!patient) throw new NotFoundException('Пациент не найден');
 
-      // 4. Привязываем сообщения к feedback
-      if (tempTexts.length) {
-        for (const text of tempTexts) {
-          text.status = BotTextMessageStatus.SAVED;
-          text.feedback = feedback;
-        }
-        await em.save(tempTexts);
-      }
-
-      if (tempVoices.length) {
-        for (const voice of tempVoices) {
-          voice.status = BotVoiceMessageStatus.SAVED;
-          voice.feedback = feedback;
-        }
-        await em.save(tempVoices);
-      }
-
-      // 🔄 Можно подключить интеграции после коммита
-      setImmediate(() => {
-        // this.trelloService?.createCardForFeedback(feedback, branch, dto.category).catch(console.error);
-      });
-
-      return feedback;
+    const feedback = em.create(FeedbackEntity, {
+      ...dto,
+      user,
+      messages: tempTexts,
+      voices: tempVoices,
+      patient,
+      phoneNumber,
+      status: FeedbackStatus.INCOMING,
+      category: dto.category,
     });
+    await em.save(feedback);
+
+    for (const text of tempTexts) {
+      text.status = BotTextMessageStatus.SAVED;
+      text.feedback = feedback;
+    }
+    if (tempTexts.length) await em.save(tempTexts);
+
+    for (const voice of tempVoices) {
+      voice.status = BotVoiceMessageStatus.SAVED;
+      voice.feedback = feedback;
+    }
+    if (tempVoices.length) await em.save(tempVoices);
+
+    return feedback;
   }
 
   async findAll(): Promise<FeedbackEntity[]> {

@@ -98,6 +98,7 @@ export class PointsService {
         feedback = await this.feedbacksService.createFeedback(
           dto.feedback,
           userId,
+          manager,
         );
       }
 
