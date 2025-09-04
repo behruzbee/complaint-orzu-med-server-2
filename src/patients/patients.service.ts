@@ -105,7 +105,10 @@ export class PatientsService {
         }
 
         const exists = await this.patientRepository.findOne({
-          where: { phoneNumber: normalizedPhone.value, status: PatientStatus.NEW },
+          where: {
+            phoneNumber: normalizedPhone.value,
+            status: PatientStatus.NEW,
+          },
         });
         if (exists) {
           skippedDuplicates++;
@@ -226,6 +229,8 @@ export class PatientsService {
         'feedbacks.voices',
         'feedbacks.point',
         'feedbacks.user',
+        'call_statuses',
+        'points',
       ],
     });
   }
