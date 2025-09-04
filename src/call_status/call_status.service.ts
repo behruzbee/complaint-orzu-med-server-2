@@ -64,6 +64,9 @@ export class CallStatusService {
       where: { phoneNumber },
     });
 
+    console.log(patient)
+    console.log(phoneNumber)
+
     if (patient) {
       if (patient.status === PatientStatus.NEW) {
         patient.status = PatientStatus.REGULAR;
@@ -79,6 +82,7 @@ export class CallStatusService {
       branch,
       status: PatientStatus.REGULAR,
     });
+
 
     return await manager.save(patient);
   }
