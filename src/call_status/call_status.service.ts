@@ -60,26 +60,41 @@ export class CallStatusService {
   ): Promise<PatientEntity | null> {
     if (!phoneNumber) return null;
 
-    let patient = await manager.findOne(PatientEntity, {
-      where: { phoneNumber },
+    // 🔎 ищем REGULAR
+    let regularPatient = await manager.findOne(PatientEntity, {
+      where: { phoneNumber, status: PatientStatus.REGULAR },
     });
 
-    if (patient) {
-      if (patient.status === PatientStatus.NEW) {
-        patient.status = PatientStatus.REGULAR;
-      } else {
-        await manager.delete(PatientEntity, {
-          phoneNumber,
-          status: PatientStatus.NEW,
-        });
+    if (regularPatient) {
+      // удаляем все NEW-дубликаты с тем же номером
+      await manager.delete(PatientEntity, {
+        phoneNumber,
+        status: PatientStatus.NEW,
+      });
+
+      // обновляем филиал, если нужно
+      if (regularPatient.branch !== branch) {
+        regularPatient.branch = branch;
       }
-      if (patient.branch !== branch) {
-        patient.branch = branch;
-      }
-      return await manager.save(patient);
+
+      return await manager.save(regularPatient);
     }
 
-    patient = manager.create(PatientEntity, {
+    // 🔎 ищем NEW
+    let newPatient = await manager.findOne(PatientEntity, {
+      where: { phoneNumber, status: PatientStatus.NEW },
+    });
+
+    if (newPatient) {
+      newPatient.status = PatientStatus.REGULAR;
+      if (newPatient.branch !== branch) {
+        newPatient.branch = branch;
+      }
+      return await manager.save(newPatient);
+    }
+
+    // 🆕 если нет ни REGULAR, ни NEW → создаём нового
+    const patient = manager.create(PatientEntity, {
       phoneNumber,
       branch,
       status: PatientStatus.REGULAR,
