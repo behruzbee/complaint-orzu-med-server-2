@@ -8,10 +8,7 @@ import { TextMessageEntity } from 'src/bot/entities/text_message.entity';
 import { VoiceMessageEntity } from 'src/bot/entities/voice_message.entity';
 import { BotTextMessageStatus } from 'src/bot/entities/text_message.entity';
 import { BotVoiceMessageStatus } from 'src/bot/entities/voice_message.entity';
-import {
-  PatientEntity,
-  PatientStatus,
-} from 'src/patients/entities/patient.entity';
+import { PatientEntity } from 'src/patients/entities/patient.entity';
 
 @Injectable()
 export class FeedbacksService {
@@ -24,7 +21,6 @@ export class FeedbacksService {
   async createFeedback(
     dto: CreateFeedbackDto,
     userId: string,
-    branch: string,
   ): Promise<FeedbackEntity> {
     return await this.dataSource.transaction(async (em) => {
       const user = await em.findOne(UserEntity, { where: { id: userId } });
@@ -56,34 +52,16 @@ export class FeedbacksService {
         );
       }
 
-      // 2. Upsert пациента
       let patient = await em.findOne(PatientEntity, {
         where: { phoneNumber },
       });
 
       if (!patient) {
-        // Новый пациент
-        patient = em.create(PatientEntity, {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phoneNumber,
-          branch,
-          status: PatientStatus.REGULAR,
-        });
-        await em.save(patient);
-      } else {
-        patient = em.create(PatientEntity, {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phoneNumber,
-          branch,
-          status: PatientStatus.REGULAR,
-        });
-
-        await em.upsert(PatientEntity, patient, ['phoneNumber']);
+        throw new NotFoundException(
+          'Не найден пациент',
+        );
       }
 
-      // 3. Создаём обратную связь
       const feedback = em.create(FeedbackEntity, {
         ...dto,
         user,
