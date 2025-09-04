@@ -15,6 +15,7 @@ import { TextMessageEntity } from 'src/bot/entities/text_message.entity';
 import { VoiceMessageEntity } from 'src/bot/entities/voice_message.entity';
 import { FeedbackCategory } from '../dto/create.dto';
 import { PatientEntity } from 'src/patients/entities/patient.entity';
+import { TrelloCardEntity } from 'src/trello/entities/trello.entity';
 
 export enum FeedbackStatus {
   INCOMING = 'Поступившие жалобы',
@@ -50,7 +51,11 @@ export class FeedbackEntity {
   @Column({ type: 'enum', enum: FeedbackCategory })
   category: FeedbackCategory;
 
-  @Column({ type: 'enum', enum: FeedbackStatus, default: FeedbackStatus.INCOMING })
+  @Column({
+    type: 'enum',
+    enum: FeedbackStatus,
+    default: FeedbackStatus.INCOMING,
+  })
   status: FeedbackStatus;
 
   @Column({ length: 20 })
@@ -59,14 +64,28 @@ export class FeedbackEntity {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => UserEntity, (user) => user.feedbacks, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => UserEntity, (user) => user.feedbacks, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn()
   user: UserEntity | null;
 
-  @ManyToOne(() => PatientEntity, (patient) => patient.feedbacks, { onDelete: 'CASCADE' })
+  @OneToMany(() => TrelloCardEntity, (trello) => trello.feedback, {
+    nullable: true,
+    cascade: ['insert', 'update'],
+  })
+  trelloCards?: TrelloCardEntity[];
+
+  @ManyToOne(() => PatientEntity, (patient) => patient.feedbacks, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   patient: PatientEntity;
 
-  @OneToOne(() => PointEntity, (point) => point.feedback, { onDelete: 'SET NULL', nullable: true })
+  @OneToOne(() => PointEntity, (point) => point.feedback, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   point: PointEntity | null;
 }
