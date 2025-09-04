@@ -234,6 +234,8 @@ export class PatientsService {
         'feedbacks.voices',
         'feedbacks.point',
         'feedbacks.user',
+        'call_statuses',
+        'points',
       ],
     });
 
