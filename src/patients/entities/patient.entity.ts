@@ -40,7 +40,7 @@ export class PatientEntity {
   status: PatientStatus;
 
   @Column({ nullable: true })
-  checkOutTime: string | null;
+  checkOutTime: string;
 
   @OneToMany(() => FeedbackEntity, (feedback) => feedback.patient, {
     nullable: true,

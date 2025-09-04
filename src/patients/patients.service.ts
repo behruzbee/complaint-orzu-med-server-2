@@ -120,7 +120,7 @@ export class PatientsService {
           phoneNumber: normalizedPhone.value,
           branch,
           status: PatientStatus.NEW,
-          checkOutTime: currentCheckoutISO ?? null,
+          checkOutTime: currentCheckoutISO ?? "",
         });
 
         toCreate.push(entity);
