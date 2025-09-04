@@ -4,7 +4,6 @@ import { Branches } from 'src/points/dto/create.dto';
 
 export class CreateCallStatusDto {
   @IsString({ message: 'Номер телефона должен быть строкой.' })
-  @Matches(/^\d{9,15}$/, { message: 'Номер телефона должен содержать только цифры, 9-15 знаков.' })
   phoneNumber: string;
 
   @IsEnum(CallStatusType, {
