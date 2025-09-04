@@ -98,6 +98,7 @@ export class PointsService {
         feedback = await this.feedbacksService.createFeedback(
           dto.feedback,
           userId,
+          dto.branch,
           manager,
         );
       }
@@ -148,6 +149,7 @@ export class PointsService {
           const fb = await this.feedbacksService.createFeedback(
             d.feedback,
             userId,
+            branch,
             manager,
           );
           feedbacksByCategory.set(d.category, fb);

@@ -9,6 +9,7 @@ import { VoiceMessageEntity } from 'src/bot/entities/voice_message.entity';
 import { BotTextMessageStatus } from 'src/bot/entities/text_message.entity';
 import { BotVoiceMessageStatus } from 'src/bot/entities/voice_message.entity';
 import { PatientEntity } from 'src/patients/entities/patient.entity';
+import { TrelloService } from 'src/trello/trello.service';
 
 @Injectable()
 export class FeedbacksService {
@@ -16,11 +17,13 @@ export class FeedbacksService {
     @InjectRepository(FeedbackEntity)
     private readonly feedbackRepository: Repository<FeedbackEntity>,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly trelloService: TrelloService,
   ) {}
 
   async createFeedback(
     dto: CreateFeedbackDto,
     userId: string,
+    branch: string,
     manager?: EntityManager,
   ): Promise<FeedbackEntity> {
     const em = manager ?? this.dataSource.manager;
@@ -80,6 +83,12 @@ export class FeedbacksService {
       voice.feedback = feedback;
     }
     if (tempVoices.length) await em.save(tempVoices);
+
+    this.trelloService.createCardForFeedback(
+      feedback,
+      branch,
+      feedback.category,
+    );
 
     return feedback;
   }
