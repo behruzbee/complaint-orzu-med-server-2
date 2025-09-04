@@ -143,6 +143,7 @@ export class WhatsappAuthService {
     const patients = await this.patientsService.getPatientsByStatus(
       PatientStatus.NEW,
     );
+
     let processed = 0;
 
     for (const p of patients) {
@@ -150,20 +151,34 @@ export class WhatsappAuthService {
         if (!this.client || !this.isReady) {
           throw new Error('❌ WhatsApp клиент не авторизован');
         }
-        const chatId = `${p.phoneNumber}@c.us`;
 
+        // 🔹 Убираем "+"
+        const cleanNumber = p.phoneNumber.replace('+', '');
+        const chatId = `${cleanNumber}@c.us`;
+
+        // 🔹 Проверка — есть ли у пациента WhatsApp
+        const isRegistered = await this.client.isRegisteredUser(chatId);
+        if (!isRegistered) {
+          this.logger.warn(`⚠️ ${p.phoneNumber} не зарегистрирован в WhatsApp`);
+          continue;
+        }
+
+        // 🔹 Выбор языка сообщения
         const message = this.getMessageByPhone(p.phoneNumber);
 
+        // 🔹 Отправляем сообщение
         await this.client.sendMessage(chatId, message);
 
         this.logger.log(
-          `✅ Сообщение отправлено: ${p.lastName} ${p.firstName}`,
+          `✅ Сообщение отправлено: ${p.lastName ?? ''} ${p.firstName ?? ''} (${p.phoneNumber})`,
         );
+
         processed++;
       } catch (e) {
         this.logger.error(`❌ Ошибка: ${p.phoneNumber} → ${e.message}`);
       }
 
+      // 🔹 Задержка между сообщениями
       await this.delay();
     }
 
