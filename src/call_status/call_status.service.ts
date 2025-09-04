@@ -64,13 +64,14 @@ export class CallStatusService {
       where: { phoneNumber },
     });
 
-    console.log(patient)
-    console.log(phoneNumber)
-    console.log("Hello World!")
-
     if (patient) {
       if (patient.status === PatientStatus.NEW) {
         patient.status = PatientStatus.REGULAR;
+      } else {
+        await manager.delete(PatientEntity, {
+          phoneNumber,
+          status: PatientStatus.NEW,
+        });
       }
       if (patient.branch !== branch) {
         patient.branch = branch;
@@ -83,7 +84,6 @@ export class CallStatusService {
       branch,
       status: PatientStatus.REGULAR,
     });
-
 
     return await manager.save(patient);
   }
