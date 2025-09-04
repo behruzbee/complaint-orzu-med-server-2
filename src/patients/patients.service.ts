@@ -115,8 +115,8 @@ export class PatientsService {
         }
 
         const entity: PatientEntity = this.patientRepository.create({
-          firstName,
-          lastName,
+          firstName: firstName || branch,
+          lastName: lastName || branch,
           phoneNumber: normalizedPhone.value,
           branch,
           status: PatientStatus.NEW,
