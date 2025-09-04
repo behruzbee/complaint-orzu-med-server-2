@@ -72,12 +72,15 @@ export class FeedbacksService {
         });
         await em.save(patient);
       } else {
-        // Существующий пациент → обновляем статус и филиал
-        patient.status = PatientStatus.REGULAR;
-        if (branch) patient.branch = branch;
-        if (dto.firstName) patient.firstName = dto.firstName;
-        if (dto.lastName) patient.lastName = dto.lastName;
-        patient = await em.save(patient);
+        patient = em.create(PatientEntity, {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phoneNumber,
+          branch,
+          status: PatientStatus.REGULAR,
+        });
+
+        await em.upsert(PatientEntity, patient, ['phoneNumber']);
       }
 
       // 3. Создаём обратную связь
