@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { PointEntity } from './entities/points.entity';
 import {
   CreateManyPointsDto,
@@ -42,42 +42,54 @@ export class PointsService {
     return user;
   }
 
-  private async getOrCreateRegularPatient(
-    em: Repository<PatientEntity> | any,
+  private async getOrCreatePatientInTx(
+    manager: EntityManager,
     phoneNumber: string,
-    branch?: string,
-  ) {
-    let patient = await em.findOne(PatientEntity, {
+    branch: string,
+  ): Promise<PatientEntity | null> {
+    if (!phoneNumber) return null;
+
+    // 🔎 ищем REGULAR
+    let regularPatient = await manager.findOne(PatientEntity, {
       where: { phoneNumber, status: PatientStatus.REGULAR },
     });
 
-    if (!patient) {
-      const existingNew = await em.findOne(PatientEntity, {
-        where: { phoneNumber, status: PatientStatus.NEW },
+    if (regularPatient) {
+      // удаляем все NEW-дубликаты с тем же номером
+      await manager.delete(PatientEntity, {
+        phoneNumber,
+        status: PatientStatus.NEW,
       });
 
-      if (existingNew) {
-        await em.update(PatientEntity, existingNew.id, {
-          status: PatientStatus.REGULAR,
-          ...(branch ? { branch } : {}),
-        });
-        patient = await em.findOne(PatientEntity, {
-          where: { id: existingNew.id },
-        });
-      } else {
-        patient = em.create(PatientEntity, {
-          phoneNumber,
-          status: PatientStatus.REGULAR,
-          ...(branch ? { branch } : {}),
-        });
-        patient = await em.save(patient);
+      // обновляем филиал, если нужно
+      if (regularPatient.branch !== branch) {
+        regularPatient.branch = branch;
       }
-    } else if (branch && patient.branch !== branch) {
-      await em.update(PatientEntity, patient.id, { branch });
-      patient.branch = branch as any;
+
+      return await manager.save(regularPatient);
     }
 
-    return patient;
+    // 🔎 ищем NEW
+    let newPatient = await manager.findOne(PatientEntity, {
+      where: { phoneNumber, status: PatientStatus.NEW },
+    });
+
+    if (newPatient) {
+      newPatient.status = PatientStatus.REGULAR;
+      if (newPatient.branch !== branch) {
+        newPatient.branch = branch;
+      }
+      return await manager.save(newPatient);
+    }
+
+    // 🆕 если нет ни REGULAR, ни NEW → создаём нового
+    const patient = manager.create(PatientEntity, {
+      phoneNumber,
+      branch,
+      status: PatientStatus.REGULAR,
+    });
+
+    return await manager.save(patient);
   }
 
   async create(
@@ -87,7 +99,7 @@ export class PointsService {
   ): Promise<PointEntity> {
     return await this.dataSource.transaction(async (manager) => {
       const user = await this.getUserOrThrow(userId);
-      const patient = await this.getOrCreateRegularPatient(
+      const patient = await this.getOrCreatePatientInTx(
         manager,
         phoneNumber,
         dto.branch,
@@ -121,7 +133,7 @@ export class PointsService {
   ): Promise<PointEntity[]> {
     return await this.dataSource.transaction(async (manager) => {
       const user = await this.getUserOrThrow(userId);
-      const patient = await this.getOrCreateRegularPatient(
+      const patient = await this.getOrCreatePatientInTx(
         manager,
         phoneNumber,
         branch,
