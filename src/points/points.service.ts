@@ -99,6 +99,7 @@ export class PointsService {
           dto.feedback,
           userId,
           dto.branch,
+          dto.category,
           manager,
         );
       }
@@ -150,6 +151,7 @@ export class PointsService {
             d.feedback,
             userId,
             branch,
+            d.category,
             manager,
           );
           feedbacksByCategory.set(d.category, fb);

@@ -24,6 +24,7 @@ export class FeedbacksService {
     dto: CreateFeedbackDto,
     userId: string,
     branch: string,
+    category: string,
     manager?: EntityManager,
   ): Promise<FeedbackEntity> {
     const em = manager ?? this.dataSource.manager;
@@ -87,7 +88,7 @@ export class FeedbacksService {
     this.trelloService.createCardForFeedback(
       feedback,
       branch,
-      feedback.category,
+      category
     );
 
     return feedback;

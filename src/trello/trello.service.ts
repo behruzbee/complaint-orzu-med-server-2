@@ -99,7 +99,7 @@ export class TrelloService {
     `👤 ФИО: ${patientName}`,
     `📞 Телефон: ${phone}`,
     `🏥 Филиал: ${branch}`,
-    `📂 Категория: ${feedback.category}`,
+    `📂 Категория: ${category}`,
     `🗂️ Статус: ${status}`,
     '',
     '📝 Текст:',
@@ -117,7 +117,7 @@ export class TrelloService {
   try {
     const { data: createdCard } = await axios.post(createCardUrl, {
       idList: firstList.id,
-      name: `${branch} — ${feedback.category}`,
+      name: `${branch} — ${category}`,
       desc: description,
       idLabels: labelId,
     });
