@@ -24,10 +24,10 @@ export class PatientEntity {
   phoneNumber: string;
 
   @Column({ nullable: true })
-  firstName?: string;
+  firstName?: string | null;
 
   @Column({ nullable: true })
-  lastName?: string;
+  lastName?: string | null;
 
   @Column({ name: 'branch', nullable: true })
   branch: string;
@@ -40,7 +40,7 @@ export class PatientEntity {
   status: PatientStatus;
 
   @Column({ nullable: true })
-  checkOutTime: string;
+  checkOutTime: string | null;
 
   @OneToMany(() => FeedbackEntity, (feedback) => feedback.patient, {
     nullable: true,
@@ -55,7 +55,7 @@ export class PatientEntity {
   @OneToMany(() => PointEntity, (point) => point.patient, {
     nullable: true,
   })
-  points: PointEntity;
+  points: PointEntity[]; // ✅ массив, а не объект
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
