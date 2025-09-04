@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { CreateCallStatusDto } from './dto/create.dto';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, Repository, DataSource } from 'typeorm';
 import { CallStatusEntity } from './entities/call_status.entity';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -13,7 +13,6 @@ import {
   PatientEntity,
   PatientStatus,
 } from 'src/patients/entities/patient.entity';
-import { DataSource } from 'typeorm';
 
 @Injectable()
 export class CallStatusService {
@@ -30,57 +29,57 @@ export class CallStatusService {
 
   async getAll() {
     try {
-      const callStatuses = await this.callStatusRepository.find({
+      return await this.callStatusRepository.find({
         relations: ['user', 'patient'],
         order: { createdAt: 'DESC' },
       });
-      return callStatuses;
     } catch (error) {
-      this.logger.error('Ошибка при получении статусов звонков', error);
+      this.logger.error('Ошибка при получении статусов звонков', error.stack);
       throw new InternalServerErrorException(
         'Ошибка при получении статусов звонков',
       );
     }
   }
 
-  private async getUserOrThrow(userId: string) {
+  private async getUserOrThrow(userId: string): Promise<UserEntity> {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) {
-      this.logger.warn(`User not found: ${userId}`);
+      this.logger.warn(`Пользователь не найден: ${userId}`);
       throw new NotFoundException('Пользователь не найден');
     }
     return user;
   }
 
+  /**
+   * 📌 Поиск или создание пациента внутри транзакции
+   */
   private async getOrCreatePatientInTx(
     manager: EntityManager,
     phoneNumber: string,
     branch: string,
-  ) {
+  ): Promise<PatientEntity | null> {
     if (!phoneNumber) return null;
 
-    // Prefer REGULAR patient
     let patient = await manager.findOne(PatientEntity, {
-      where: { phoneNumber, status: PatientStatus.REGULAR },
+      where: { phoneNumber },
     });
 
     if (patient) {
+      if (patient.status === PatientStatus.NEW) {
+        patient.status = PatientStatus.REGULAR;
+      }
       if (patient.branch !== branch) {
         patient.branch = branch;
-        patient = await manager.save(patient);
       }
-      return patient;
+      return await manager.save(patient);
     }
-
-    await manager.delete(PatientEntity, {
-      phoneNumber,
-      status: PatientStatus.NEW,
-    });
 
     patient = manager.create(PatientEntity, {
       phoneNumber,
+      branch,
       status: PatientStatus.REGULAR,
     });
+
     return await manager.save(patient);
   }
 
@@ -88,28 +87,35 @@ export class CallStatusService {
     callStatusDto: CreateCallStatusDto,
     userId: string,
   ): Promise<CallStatusEntity> {
-    const { phoneNumber, branch } = callStatusDto;
+    const { phoneNumber, branch, status } = callStatusDto;
+
     return await this.dataSource.transaction(async (manager) => {
       try {
         const user = await this.getUserOrThrow(userId);
-
-        const newStatus = manager.create(CallStatusEntity, {
-          status: callStatusDto.status,
-          phoneNumber,
-          branch,
-        });
 
         const patient = await this.getOrCreatePatientInTx(
           manager,
           phoneNumber,
           branch,
         );
-        newStatus.patient = patient || null;
-        newStatus.user = user;
 
-        return await manager.save(newStatus);
+        const newStatus = manager.create(CallStatusEntity, {
+          status,
+          phoneNumber,
+          branch,
+          user,
+          patient,
+        });
+
+        const saved = await manager.save(newStatus);
+
+        this.logger.log(
+          `Создан новый call status ${saved.id} для пациента ${phoneNumber}`,
+        );
+
+        return saved;
       } catch (error) {
-        this.logger.error('Ошибка при создании статуса звонка', error);
+        this.logger.error('Ошибка при создании статуса звонка', error.stack);
         throw new InternalServerErrorException(
           'Ошибка при создании статуса звонка',
         );
@@ -132,7 +138,10 @@ export class CallStatusService {
       this.logger.log(`Удалён call status ${lastStatus.id}`);
       return { message: 'Последний статус звонка успешно удалён' };
     } catch (error) {
-      this.logger.error('Ошибка при удалении последнего статуса звонка', error);
+      this.logger.error(
+        'Ошибка при удалении последнего статуса звонка',
+        error.stack,
+      );
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(
         'Ошибка при удалении последнего статуса звонка',
