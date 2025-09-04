@@ -49,9 +49,9 @@ export class PatientsService {
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i] as any;
-        const lineNumber = i + 2; // 1 — заголовки
+        const lineNumber = i + 2;
 
-        // 📌 Проверка: строка с датой (разделитель)
+        // 📌 Проверка строки-даты
         const rawValues = Object.values(row).map((v) => String(v).trim());
         const dateCandidate = rawValues.find((val) =>
           /^\d{1,2}[,.\-/]\d{1,2}[,.\-/]\d{4}$/.test(val),
@@ -70,7 +70,6 @@ export class PatientsService {
         ).trim();
         const branchInput = String(row['Филиал'] || '').trim();
 
-        // пустая строка
         if (!fullName && !phoneNumber && !branchInput) continue;
 
         if (!fullName || !phoneNumber) {
@@ -96,7 +95,7 @@ export class PatientsService {
           continue;
         }
 
-        // 📌 Филиал
+        // 📌 Филиал (поиск ближайшего совпадения)
         let branch: string;
         try {
           branch = this.normalizeBranch(branchInput, lineNumber);
@@ -105,9 +104,8 @@ export class PatientsService {
           continue;
         }
 
-        // 📌 Дубликат по номеру
         const exists = await this.patientRepository.findOne({
-          where: { phoneNumber: normalizedPhone.value },
+          where: { phoneNumber: normalizedPhone.value, status: PatientStatus.NEW },
         });
         if (exists) {
           skippedDuplicates++;
@@ -120,7 +118,7 @@ export class PatientsService {
           phoneNumber: normalizedPhone.value,
           branch,
           status: PatientStatus.NEW,
-          checkOutTime: currentCheckoutISO ?? "",
+          checkOutTime: currentCheckoutISO ?? '',
         });
 
         toCreate.push(entity);
@@ -153,7 +151,7 @@ export class PatientsService {
     }
   }
 
-  // 📌 Нормализация филиала
+  // 📌 Поиск ближайшего филиала
   normalizeBranch(inputBranch: string, lineNumber: number): string {
     if (!inputBranch) {
       throw new BadRequestException(
@@ -162,18 +160,25 @@ export class PatientsService {
     }
 
     const branchList = Object.values(Branches).map((b) => String(b));
-    const { bestMatch, bestMatchIndex } = stringSimilarity.findBestMatch(
+
+    // ищем ближайшие совпадения
+    const matches = stringSimilarity.findBestMatch(
       inputBranch.toUpperCase(),
       branchList.map((b) => b.toUpperCase()),
     );
 
-    if (bestMatch.rating < 0.6) {
+    const best = matches.bestMatch;
+    const bestBranch = branchList[matches.bestMatchIndex];
+
+    if (best.rating < 0.4) {
       throw new BadRequestException(
-        `Ошибка в строке ${lineNumber}: филиал "${inputBranch}" не найден`,
+        `Ошибка в строке ${lineNumber}: филиал "${inputBranch}" не найден. Возможно, вы имели в виду: ${branchList
+          .slice(0, 3)
+          .join(', ')}`,
       );
     }
 
-    return branchList[bestMatchIndex];
+    return bestBranch;
   }
 
   // 📌 Нормализация телефона
@@ -192,7 +197,7 @@ export class PatientsService {
       return { valid: false, value: phone };
     }
 
-    return { valid: true, value };
+    return { valid: true, value: '+' + value }; // всегда добавляем "+"
   }
 
   // 📌 Ручное добавление
@@ -204,8 +209,8 @@ export class PatientsService {
     const patient = this.patientRepository.create({
       firstName,
       lastName,
-      phoneNumber,
-      branch,
+      phoneNumber: this.normalizePhone(phoneNumber).value,
+      branch: this.normalizeBranch(branch, 0),
       status: PatientStatus.NEW,
     });
 
