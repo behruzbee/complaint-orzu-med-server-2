@@ -1,6 +1,6 @@
 FROM node:20-bullseye-slim
 
-# Установим базовые зависимости
+# Установим базовые зависимости для Puppeteer
 RUN apt-get update -o Acquire::ForceIPv4=true \
     && apt-get install -y --no-install-recommends \
        ca-certificates fonts-liberation libappindicator3-1 \
@@ -18,10 +18,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Устанавливаем зависимости (Puppeteer скачает Chromium)
-RUN npm install --production
+RUN npm install
 
 # Копируем весь проект
 COPY . .
+
+# Собираем TypeScript
+RUN npm run build
 
 # Запуск приложения
 CMD ["node", "dist/main.js"]
