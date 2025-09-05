@@ -100,7 +100,11 @@ export class WhatsappAuthService {
   }
 
   /** 📌 Определение языка по номеру */
-  private getMessageByPhone(phone: string, firstName: string, lastName: string): string {
+  private getMessageByPhone(
+    phone: string,
+    firstName: string,
+    lastName: string,
+  ): string {
     const messageUz = `Ассалому алайкум, ҳурматли беморимиз! ${firstName} ${lastName}🌸  
 Мен – Orzu Medical клиникасидан Дурдона.  
 
@@ -164,7 +168,11 @@ export class WhatsappAuthService {
         }
 
         // 🔹 Выбор языка сообщения
-        const message = this.getMessageByPhone(p.phoneNumber, p.firstName || "", p.lastName || "");
+        const message = this.getMessageByPhone(
+          p.phoneNumber,
+          p.firstName || '',
+          p.lastName || '',
+        );
 
         // 🔹 Отправляем сообщение
         await this.client.sendMessage(chatId, message);
